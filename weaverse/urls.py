@@ -9,4 +9,3 @@ urlpatterns = [
     path("api/", include("courses.urls")),
     path("api/", include("materials.urls")),
 ]
-s

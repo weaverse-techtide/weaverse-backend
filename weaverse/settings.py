@@ -3,13 +3,15 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "django-insecure-da0mi_044pv-vs7-gpw8qb6t8=2czy@^er34_1^d-+pvve+vzg"
+SECRET_KEY = os.getenv("SECRET_KEY")
 
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -52,8 +54,12 @@ WSGI_APPLICATION = "weaverse.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": os.getenv("DATABASE_ENGINE", "django.db.backends.sqlite3"),
+        "NAME": os.getenv("DATABASE_NAME", BASE_DIR / "db.sqlite3"),
+        "USER": os.getenv("DATABASE_USER", ""),
+        "PASSWORD": os.getenv("DATABASE_PASSWORD", ""),
+        "HOST": os.getenv("DATABASE_HOST", ""),
+        "PORT": os.getenv("DATABASE_PORT", ""),
     }
 }
 
@@ -72,9 +78,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "ko-kr"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Seoul"
 
 USE_I18N = True
 

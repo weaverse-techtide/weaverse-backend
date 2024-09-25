@@ -8,8 +8,6 @@ from .models import BlacklistedToken
 
 User = get_user_model()
 
-TOKEN_EXPIRED = "사용자 혹은 토큰이 유효하지 않습니다!"
-
 
 class JWTAuthentication(BaseAuthentication):
     """
@@ -32,17 +30,17 @@ class JWTAuthentication(BaseAuthentication):
             )
 
         except jwt.ExpiredSignatureError:
-            raise AuthenticationFailed(TOKEN_EXPIRED)
+            raise AuthenticationFailed("토큰 만료")
         except IndexError:
-            raise AuthenticationFailed(TOKEN_EXPIRED)
+            raise AuthenticationFailed("토큰 없음")
         except jwt.DecodeError:
-            raise AuthenticationFailed(TOKEN_EXPIRED)
+            raise AuthenticationFailed("토큰 오류")
 
         if BlacklistedToken.objects.filter(token=access_token).exists():
-            raise AuthenticationFailed(TOKEN_EXPIRED)
+            raise AuthenticationFailed("토큰 사용 불가")
 
         user = User.objects.filter(id=payload["user_id"]).first()
         if user is None:
-            raise AuthenticationFailed(TOKEN_EXPIRED)
+            raise AuthenticationFailed("사용자 없음")
 
         return (user, None)

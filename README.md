@@ -16,7 +16,7 @@ WEAVERSE는 온라인 영상 교육 플랫폼을 구현하기 위한 프로젝�
 
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 
-### 프레임워크 & 라이브러리
+### 프레임워크 & third party 라이브러리
 
 ![Django](https://img.shields.io/badge/django-%23092E20.svg?style=for-the-badge&logo=django&logoColor=white) ![DjangoREST](https://img.shields.io/badge/DJANGO-REST-ff1709?style=for-the-badge&logo=django&logoColor=white&color=ff1709&labelColor=gray)
 
@@ -54,9 +54,13 @@ ALLOWED_HOSTS='*'
 
 ```shell
 # 가상환경 설치
-python3 -m venv venv
+python3 -m venv .venv
 # 활성화
-source venv/bin/activate
+# 윈도우즈
+.venv\Scripts\activate
+
+# mac & linux
+source .venv/bin/activate
 ```
 
 또는
@@ -203,7 +207,7 @@ python manage.py runserver
 
 ![week1](assets/images/week1.png)
 
-### 2주착 기능 구현
+### 2주차 기능 구현
 
 ![week2](assets/images/week2.png)
 

@@ -11,7 +11,7 @@ class Curriculum(models.Model):
         return self.name
 
 class Course(models.Model):
-    curriculum = models.ForeignKey(Curriculum, on_delete=models.CASCADE, related_name='courses')
+    curriculum = models.ForeignKey(Curriculum, on_delete=models.SET_NULL, null=True, related_name='courses')
     title = models.CharField(max_length=255, verbose_name='코스 제목')
     description = models.TextField(verbose_name='설명')
     created_at = models.DateTimeField(auto_now_add=True)

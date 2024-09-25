@@ -5,6 +5,11 @@ from django.utils import timezone
 
 
 def generate_access_token(user):
+    """
+    access 토근을 생성하는 함수
+    payload에는 user_id, exp, iat를 넣어준다.
+    응답으로 받은 토큰은 클라이언트에서 로컬 스토리지에 저장
+    """
     payload = {
         "user_id": user.id,
         "exp": timezone.now() + timedelta(minutes=5),
@@ -14,6 +19,11 @@ def generate_access_token(user):
 
 
 def generate_refresh_token(user):
+    """
+    refresh 토근을 생성하는 함수
+    payload에는 user_id, exp, iat를 넣어준다.
+    응답으로 받은 토큰은 클라이언트에서 쿠키에 저장
+    """
     payload = {
         "user_id": user.id,
         "exp": timezone.now() + timedelta(minutes=60),

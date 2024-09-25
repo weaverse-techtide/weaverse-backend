@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+from datetime import timedelta
 
 load_dotenv()
 
@@ -27,12 +28,17 @@ INSTALLED_APPS = [
     "materials",
 ]
 
+JWT_AUTH = {
+    "JWT_EXPIRATION_DELTA": timedelta(minutes=60),
+    "JWT_REFRESH_EXPIRATION_DELTA": timedelta(days=7),
+}
+
 AUTH_USER_MODEL = "accounts.User"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
-        # 'jwtauth.authentication.JWTAuthentication',
+        "jwtauth.authentication.JWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",

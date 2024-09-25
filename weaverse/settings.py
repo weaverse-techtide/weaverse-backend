@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "accounts",
+    "drf_yasg",
     "jwtauth",
     "courses",
     "materials",

@@ -64,6 +64,8 @@ class RefreshTokenView(APIView):
     refresh_token이 만료되었거나 오류가 있으면 401 반환
     """
 
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         refresh_token = request.data.get("refresh_token")
         if not refresh_token:
@@ -77,6 +79,12 @@ class RefreshTokenView(APIView):
                 refresh_token, settings.SECRET_KEY, algorithms=["HS256"]
             )
             user = User.objects.get(id=payload["user_id"])
+
+            if BlacklistedToken.objects.filter(token=refresh_token).exists():
+                return Response(
+                    {"error": "인증 오류"}, status=status.HTTP_401_UNAUTHORIZED
+                )
+
             access_token = generate_access_token(user)
             return Response({"access_token": access_token})
         except jwt.ExpiredSignatureError:

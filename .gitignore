@@ -61,12 +61,6 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
-# Django migration files 
-*/migrations/
-
-# Keep the __init__.py file in migrations
-!*/migrations/__init__.py
-
 # Flask stuff:
 instance/
 .webassets-cache

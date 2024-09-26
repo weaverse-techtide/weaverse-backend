@@ -4,9 +4,7 @@ from django.contrib.auth import get_user_model
 import jwt
 from django.conf import settings
 from .models import BlacklistedToken
-
-
-User = get_user_model()
+from .models import CustomUser
 
 
 class JWTAuthentication(BaseAuthentication):
@@ -39,7 +37,7 @@ class JWTAuthentication(BaseAuthentication):
         if BlacklistedToken.objects.filter(token=access_token).exists():
             raise AuthenticationFailed("토큰 사용 불가")
 
-        user = User.objects.filter(id=payload["user_id"]).first()
+        user = CustomUser.objects.filter(id=payload["user_id"]).first()
         if user is None:
             raise AuthenticationFailed("사용자 없음")
 

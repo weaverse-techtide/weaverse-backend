@@ -7,6 +7,7 @@ from .utils import generate_access_token, generate_refresh_token
 from .models import BlacklistedToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
 import jwt
+from accounts.models import CustomUser
 
 
 class LoginView(APIView):
@@ -54,9 +55,6 @@ class LogoutView(APIView):
         return Response({"success": "bye."}, status=status.HTTP_200_OK)
 
 
-User = get_user_model()
-
-
 class RefreshTokenView(APIView):
     """
     refresh_token을 받아서 access_token을 재발급
@@ -78,7 +76,7 @@ class RefreshTokenView(APIView):
             payload = jwt.decode(
                 refresh_token, settings.SECRET_KEY, algorithms=["HS256"]
             )
-            user = User.objects.get(id=payload["user_id"])
+            user = CustomUser.objects.get(id=payload["user_id"])
 
             if BlacklistedToken.objects.filter(token=refresh_token).exists():
                 return Response(
@@ -89,5 +87,5 @@ class RefreshTokenView(APIView):
             return Response({"access_token": access_token})
         except jwt.ExpiredSignatureError:
             return Response({"error": "인증 만료"}, status=status.HTTP_401_UNAUTHORIZED)
-        except (jwt.DecodeError, User.DoesNotExist):
+        except (jwt.DecodeError, CustomUser.DoesNotExist):
             return Response({"error": "토큰 오류"}, status=status.HTTP_401_UNAUTHORIZED)

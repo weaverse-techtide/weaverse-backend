@@ -7,6 +7,7 @@ from .utils import generate_access_token, generate_refresh_token
 from .models import BlacklistedToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
 import jwt
+from accounts.models import CustomUser
 
 
 class LoginView(APIView):
@@ -86,7 +87,7 @@ class RefreshTokenView(APIView):
             payload = jwt.decode(
                 refresh_token, settings.SECRET_KEY, algorithms=["HS256"]
             )
-            user = User.objects.get(id=payload["user_id"])
+            user = CustomUser.objects.get(id=payload["user_id"])
 
             access_token = generate_access_token(user)
             refresh_token = generate_refresh_token(user)

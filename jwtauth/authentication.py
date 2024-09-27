@@ -7,7 +7,6 @@ from .models import BlacklistedToken
 
 TOKEN_EXPIRED = "사용자 혹은 토큰이 유효하지 않습니다!"
 
-# CustomUser 모델 직접 임포트 대신 get_user_model() 사용
 User = get_user_model()
 
 

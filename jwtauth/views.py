@@ -12,12 +12,7 @@ from accounts.models import CustomUser
 
 class LoginView(APIView):
     """
-    사용자 로그인
-    접근 권한: 모두
-    필수 입력: email, password
-    매칭되는 사용자가 있으면 access_token, refresh_token 반환
-    매칭이 안되면 401 반환, 회원가입 권유 메시지 출력
-    작동 확인: 완료
+    사용자가 로그인할 때 사용, email과 password를 받아서 인증 합니다.
     """
 
     permission_classes = [AllowAny]
@@ -42,10 +37,7 @@ class LoginView(APIView):
 
 class LogoutView(APIView):
     """
-    사용자 로그아웃
-    접근 권한: 인증된 사용자
-    access_token을 BlacklistedToken에 추가
-    응답: 성공시 200 반환, bye 메시지 출력
+    사용자가 로그아웃할 때 사용, 현재 토큰을 블랙리스트에 추가합니다.
     """
 
     permission_classes = [IsAuthenticated]
@@ -61,9 +53,7 @@ User = get_user_model()
 
 class RefreshTokenView(APIView):
     """
-    refresh_token을 받아서 access_token, refresh_token을 재발급
-    필수 정보: refresh_token
-    refresh_token이 만료되었거나 오류가 있으면 401 반환
+    사용자가 리프레시 토큰을 제공하면 새로운 액세스, 리프레시 토큰을 반환합니다.
     """
 
     permission_classes = [AllowAny]

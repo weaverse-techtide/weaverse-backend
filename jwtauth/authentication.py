@@ -11,11 +11,8 @@ User = get_user_model()
 
 class JWTAuthentication(BaseAuthentication):
     """
-    사용자 인증
-    헤더에 Authorization: Bearer <access_token>을 포함하여 요청
-    access_token이 만료되었거나 없거나 오류가 있으면 401 반환
-    access_token이 BlacklistedToken에 있으면 401 반환
-    access_token이 유효하면 사용자 반환
+    해당 클래스는 JWT 토큰을 사용하여 사용자를 인증하는 데 사용됩니다.
+    - 토큰이 유효하지 않으면 해당하는 메시지를 반환합니다.
     """
 
     def authenticate(self, request):
@@ -28,10 +25,6 @@ class JWTAuthentication(BaseAuthentication):
             payload = jwt.decode(
                 access_token, settings.SECRET_KEY, algorithms=["HS256"]
             )
-
-            # 관리자가 특정 access토큰을 블랙리스트에 추가할 필요있을까? 혹은 유저 ID를 블랙리스트에 추가 하는 새로운 기능 관리?
-            # if BlacklistedToken.objects.filter(token=access_token).exists():
-            #     raise AuthenticationFailed("토큰이 블랙리스트에 등록되었습니다!")
 
             user_id = payload.get("user_id")
             if user_id is None:

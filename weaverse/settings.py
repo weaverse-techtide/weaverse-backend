@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "accounts",
+    "drf_spectacular",
     "jwtauth",
     "courses",
     "materials",
@@ -68,6 +69,10 @@ DATABASES = {
     }
 }
 
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -95,4 +100,15 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-AUTH_USER_MODEL = 'accounts.CustomUser'
+AUTH_USER_MODEL = "accounts.CustomUser"
+
+# openapi 3.0
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Weaverse API Documentation",
+    "DESCRIPTION": "위버스 프로젝트는 온라인 교육 영상 콘텐츠를 제공하는 플랫폼입니다.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SCHEMA_PATH_PREFIX": "/api/schema",
+    "SERVE_URLCONF": "weaverse.urls",
+    "EXTERNAL_DOCS": {"description": "Weaverse GitHub", "url": ""},
+}

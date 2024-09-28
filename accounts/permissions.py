@@ -1,11 +1,8 @@
 from rest_framework import permissions
 
 
-class BaseAuthPermission(permissions.BasePermission):
+class BaseAuthPermission(permissions.IsAuthenticated):
     message = "이 작업을 수행할 권한이 없습니다."
-
-    def is_authenticated(self, request):
-        return bool(request.user and request.user.is_authenticated)
 
 
 class IsAuthenticatedOrCreateOnly(BaseAuthPermission):

@@ -3,11 +3,16 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import CustomUser
-from .permissions import IsAuthenticatedAndTutor, IsAuthenticatedOrCreateOnly
+from .permissions import (
+    IsAuthenticatedAndSuperUser,
+    IsAuthenticatedAndTutor,
+    IsAuthenticatedOrCreateOnly,
+    IsTutorOrSuperUserOrSuperUserCreateOnly,
+)
 from .serializers import CustomUserSerializer
 
 
@@ -75,7 +80,7 @@ def student_retrieve_update_delete(request, pk):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticatedAndTutor, IsAdminUser])
+@permission_classes([IsAuthenticatedAndTutor, IsAuthenticatedAndSuperUser])
 def student_count(request):
     """
     활동 중인 학생 사용자 수 조회합니다.
@@ -85,7 +90,7 @@ def student_count(request):
 
 
 @api_view(["GET", "POST"])
-@permission_classes([IsAdminUser])
+@permission_classes([IsTutorOrSuperUserOrSuperUserCreateOnly])
 def tutor_list_create(request):
     """
     관리자 사용자 목록 조회 및 생성합니다.
@@ -104,7 +109,7 @@ def tutor_list_create(request):
 
 
 @api_view(["GET", "PUT", "DELETE"])
-@permission_classes([IsAdminUser])
+@permission_classes([IsAuthenticatedAndTutor, IsAuthenticatedAndSuperUser])
 def tutor_retrieve_update_delete(request, pk):
     """
     관리자 사용자 조회, 수정, 삭제합니다.

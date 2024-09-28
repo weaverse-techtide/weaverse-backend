@@ -82,6 +82,12 @@ DATABASES = {
     }
 }
 
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -111,7 +117,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "accounts.CustomUser"
 
-# openapi 3.0
 SPECTACULAR_SETTINGS = {
     "TITLE": "Weaverse API Documentation",
     "DESCRIPTION": "위버스 프로젝트는 온라인 교육 영상 콘텐츠를 제공하는 플랫폼입니다.",

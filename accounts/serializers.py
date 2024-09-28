@@ -25,6 +25,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
             "is_active",
             "is_staff",
             "user_type",
+            "date_joined",
         ]  # API로의 직접 수정 불가 필드 지정
 
         def get_user_type(self, obj):
@@ -42,3 +43,5 @@ class CustomUserSerializer(serializers.ModelSerializer):
             if not instance.is_staff:
                 representation.pop("is_staff", None)
             return representation
+        
+        

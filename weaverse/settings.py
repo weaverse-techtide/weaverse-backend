@@ -56,6 +56,19 @@ TEMPLATES = [
     },
 ]
 
+REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": (
+        "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",  # 이 옵션이 있어야 브라우저에서 API를 시각적으로 볼 수 있음
+    ),
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework.authentication.TokenAuthentication",
+        "jwtauth.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PARSER_CLASSES": ("rest_framework.parsers.JSONParser",),
+    "DEFAULT_SCHEMA_CLASS": ("drf_spectacular.openapi.AutoSchema",),
+}
+
 WSGI_APPLICATION = "weaverse.wsgi.application"
 
 DATABASES = {

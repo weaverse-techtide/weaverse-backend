@@ -66,9 +66,7 @@ def student_retrieve_update_delete(request, pk):
         serializer = CustomUserSerializer(user)
         return Response(serializer.data)
     elif request.method == "PUT":
-        serializer = CustomUserSerializer(
-            user, data=request.data, partial=True  # 부분 업데이트 허용
-        )
+        serializer = CustomUserSerializer(user, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -120,7 +118,7 @@ def tutor_retrieve_update_delete(request, pk):
         serializer = CustomUserSerializer(tutor)
         return Response(serializer.data)
     elif request.method == "PUT":
-        serializer = CustomUserSerializer(tutor, data=request.data, partial=True)
+        serializer = CustomUserSerializer(tutor, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

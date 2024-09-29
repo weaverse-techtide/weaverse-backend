@@ -43,5 +43,3 @@ class CustomUserSerializer(serializers.ModelSerializer):
             if not instance.is_staff:
                 representation.pop("is_staff", None)
             return representation
-        
-        

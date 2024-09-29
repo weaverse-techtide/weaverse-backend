@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "accounts",
     "drf_spectacular",
+    "drf_spectacular",
     "jwtauth",
     "courses",
     "materials",

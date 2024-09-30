@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from courses.models import Curriculum, Course
+from courses.models import Curriculum
 
 from .models import Cart, CartItem
 from .serializers import CartSerializer, CartItemSerializer
@@ -53,7 +53,6 @@ class CartItemView(APIView):
         """
         cart = self.get_cart(request.user)
         curriculum_id = request.data.get("curriculum_id")
-        course_id = request.data.get("course_id")
         quantity = int(request.data.get("quantity", 1))
 
         if quantity < 0:
@@ -70,17 +69,8 @@ class CartItemView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        try:
-            course = Course.objects.get(id=course_id)
-        except Course.DoesNotExist:
-            return Response(
-                {"detail": "해당되는 코스가 없습니다."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
         cart_item, created = CartItem.objects.update_or_create(
             cart=cart,
-            course=course,
             curriculum=curriculum,
             defaults={"quantity": quantity},
         )

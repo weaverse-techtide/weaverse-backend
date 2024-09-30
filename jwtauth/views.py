@@ -13,6 +13,7 @@ from accounts.models import CustomUser
 class LoginView(APIView):
     """
     사용자가 로그인할 때 사용, email과 password를 받아서 인증 합니다.
+    email과 password가 일치하고 활성화된 사용자인 경우, access,refresh 토큰을 반환합니다.
     """
 
     permission_classes = [AllowAny]
@@ -22,38 +23,51 @@ class LoginView(APIView):
         password = request.data.get("password")
         user = authenticate(email=email, password=password)
 
-        if user is not None:
+        if user is not None and user.is_active:
             access_token = generate_access_token(user)
             refresh_token = generate_refresh_token(user)
 
             return Response(
                 {"access_token": access_token, "refresh_token": refresh_token}
             )
+
         else:
             return Response(
                 {"error": "회원 가입하세요"}, status=status.HTTP_401_UNAUTHORIZED
             )
 
 
+User = get_user_model()
+
+
 class LogoutView(APIView):
     """
-    사용자가 로그아웃할 때 사용, 현재 토큰을 블랙리스트에 추가합니다.
+    사용자가 로그아웃할 때 사용, 현재 refresh 토큰을 블랙리스트에 추가합니다.
     """
 
-    permission_classes = [IsAuthenticated]
-
     def post(self, request):
-        token = request.auth
-        BlacklistedToken.objects.create(token=token)
-        return Response({"success": "bye."}, status=status.HTTP_200_OK)
+        try:
+            refresh_token = request.data.get("refresh_token")
 
+            BlacklistedToken.objects.create(token=refresh_token, user=request.user)
+            return Response(
+                {
+                    "success": "로그아웃 완료. refresh 토큰이 블랙리스트에 추가되었습니다."
+                },
+                status=status.HTTP_200_OK,
+            )
 
-User = get_user_model()
+        except Exception as e:
+            return Response(
+                {"error": f"블랙리스트에 추가하는 중 오류 발생: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class RefreshTokenView(APIView):
     """
     사용자가 리프레시 토큰을 제공하면 새로운 액세스, 리프레시 토큰을 반환합니다.
+    사용된 리프레시 토큰은 블랙리스트에 추가됩니다.
     """
 
     permission_classes = [AllowAny]
@@ -80,6 +94,10 @@ class RefreshTokenView(APIView):
 
             access_token = generate_access_token(user)
             refresh_token = generate_refresh_token(user)
+
+            BlacklistedToken.objects.create(
+                token=refresh_token, user=user, token_type="refresh"
+            )
             return Response(
                 {"access_token": access_token, "refresh_token": refresh_token}
             )

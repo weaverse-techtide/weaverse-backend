@@ -11,6 +11,10 @@ from .models import (
 
 
 class AssignmentSerializer(serializers.ModelSerializer):
+    """
+    Assignment 모델을 위한 Serializer입니다
+    """
+
     id = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -19,6 +23,10 @@ class AssignmentSerializer(serializers.ModelSerializer):
 
 
 class MultipleChoiceQuestionChoiceSerializer(serializers.ModelSerializer):
+    """
+    MultipleChoiceQuestionChoice 모델을 위한 Serializer입니다
+    """
+
     id = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -27,6 +35,10 @@ class MultipleChoiceQuestionChoiceSerializer(serializers.ModelSerializer):
 
 
 class MultipleChoiceQuestionSerializer(serializers.ModelSerializer):
+    """
+    MultipleChoiceQuestion 모델을 위한 Serializer입니다
+    """
+
     multiple_choice_question_choices = MultipleChoiceQuestionChoiceSerializer(many=True)
 
     class Meta:
@@ -40,6 +52,10 @@ class MultipleChoiceQuestionSerializer(serializers.ModelSerializer):
 
 
 class TopicSerializer(serializers.ModelSerializer):
+    """
+    Topic 모델을 위한 Serializer입니다
+    """
+
     id = serializers.IntegerField(read_only=True)
     multiple_choice_question = MultipleChoiceQuestionSerializer(required=False)
     assignment = AssignmentSerializer(required=False)
@@ -61,6 +77,10 @@ class TopicSerializer(serializers.ModelSerializer):
 
 
 class LectureSerializer(serializers.ModelSerializer):
+    """
+    Lecture 모델을 위한 Serializer입니다
+    """
+
     id = serializers.IntegerField(read_only=True)
     topics = TopicSerializer(many=True)
 
@@ -70,6 +90,10 @@ class LectureSerializer(serializers.ModelSerializer):
 
 
 class CourseDetailSerializer(serializers.ModelSerializer):
+    """
+    Course 모델을 위한 Serializer입니다
+    """
+
     id = serializers.IntegerField(read_only=True)
     lectures = LectureSerializer(
         many=True,
@@ -92,6 +116,10 @@ class CourseDetailSerializer(serializers.ModelSerializer):
 
 
 class CourseSummarySerializer(serializers.ModelSerializer):
+    """
+    Course 모델을 위한 Serializer입니다
+    """
+
     id = serializers.IntegerField(read_only=True)
 
     class Meta:

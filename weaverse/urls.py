@@ -13,6 +13,7 @@ urlpatterns = [
     path("api/", include("jwtauth.urls")),
     path("api/", include("courses.urls")),
     path("api/", include("materials.urls")),
+    path("api/", include("payments.urls")),
 ]
 
 urlpatterns += [

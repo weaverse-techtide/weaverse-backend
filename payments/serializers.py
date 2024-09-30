@@ -5,12 +5,10 @@ from .models import Cart, CartItem
 
 class CartItemSerializer(serializers.ModelSerializer):
     """
-    상품 모델의 시리얼라이저입니다. 코스 모델의 일부 필드를 포함합니다.
+    상품 모델의 시리얼라이저입니다. 커리큘럼 이름을 포함합니다.
     """
 
-    course_title = serializers.CharField(source="course.title", read_only=True)
-    course_category = serializers.CharField(source="course.category", read_only=True)
-    course_level = serializers.CharField(source="course.course_level", read_only=True)
+    curriculum_name = serializers.SerializerMethodField()
 
     class Meta:
         model = CartItem

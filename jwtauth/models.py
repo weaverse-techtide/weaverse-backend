@@ -1,14 +1,24 @@
 from django.db import models
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class BlacklistedToken(models.Model):
-    token = models.CharField(max_length=500)
+    token = models.CharField(max_length=500, unique=True)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="blacklisted_tokens"
+    )
     blacklisted_at = models.DateTimeField(auto_now_add=True)
+    token_type = models.CharField(
+        max_length=10, choices=[("access", "Access"), ("refresh", "Refresh")]
+    )
 
     def __str__(self):
-        return f"Blacklisted token {self.token[:20]}... at {self.blacklisted_at}"
+        return f"{self.token_type.capitalize()} token {self.token[:20]}... blacklisted at {self.blacklisted_at}"
 
-
-# Todo Refresh Token Rotation - 재사용 토큰을 블랙리스트에 추가, 사용를 제한
-# 블랙리스트 캐시를 어디로 옮길지 결정해야함... 장고 내장? 레디스?
-# class TokenRotation(models.Model):
+    class Meta:
+        indexes = [
+            models.Index(fields=["token"]),
+            models.Index(fields=["user", "token_type"]),
+        ]

@@ -26,7 +26,6 @@ class CartItem(models.Model):
     curriculum = models.OneToOneField(
         Curriculum, on_delete=models.CASCADE, null=True, blank=True
     )
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True)
     quantity = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

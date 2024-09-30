@@ -152,6 +152,7 @@ class CourseListCreateView(generics.ListCreateAPIView):
             self.create_multiple_choice_question_choice(
                 multiple_choice_question, choice_data
             )
+        return multiple_choice_question
 
     def create_multiple_choice_question_choice(
         self, multiple_choice_question, choice_data

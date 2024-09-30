@@ -11,15 +11,19 @@ from .models import (
 
 
 class AssignmentSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Assignment
-        fields = ["question", "created_at", "updated_at"]
+        fields = ["id", "question", "created_at", "updated_at"]
 
 
 class MultipleChoiceQuestionChoiceSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = MultipleChoiceQuestionChoice
-        fields = ["choice", "is_correct", "created_at", "updated_at"]
+        fields = ["id", "choice", "is_correct", "created_at", "updated_at"]
 
 
 class MultipleChoiceQuestionSerializer(serializers.ModelSerializer):
@@ -36,12 +40,14 @@ class MultipleChoiceQuestionSerializer(serializers.ModelSerializer):
 
 
 class TopicSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
     multiple_choice_question = MultipleChoiceQuestionSerializer(required=False)
     assignment = AssignmentSerializer(required=False)
 
     class Meta:
         model = Topic
         fields = [
+            "id",
             "title",
             "type",
             "description",
@@ -55,14 +61,16 @@ class TopicSerializer(serializers.ModelSerializer):
 
 
 class LectureSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
     topics = TopicSerializer(many=True)
 
     class Meta:
         model = Lecture
-        fields = ["title", "order", "created_at", "updated_at", "topics"]
+        fields = ["id", "title", "order", "created_at", "updated_at", "topics"]
 
 
-class CourseSerializer(serializers.ModelSerializer):
+class CourseDetailSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
     lectures = LectureSerializer(
         many=True,
         required=False,
@@ -71,6 +79,7 @@ class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = [
+            "id",
             "title",
             "short_description",
             "description",
@@ -78,5 +87,21 @@ class CourseSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "lectures",
+            "course_level",
+        ]
+
+
+class CourseSummarySerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Course
+        fields = [
+            "id",
+            "title",
+            "short_description",
+            "category",
+            "created_at",
+            "updated_at",
             "course_level",
         ]

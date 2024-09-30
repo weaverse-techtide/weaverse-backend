@@ -10,7 +10,8 @@ from courses.models import (
 )
 from courses.serializers import (
     AssignmentSerializer,
-    CourseSerializer,
+    CourseDetailSerializer,
+    CourseSummarySerializer,
     LectureSerializer,
     MultipleChoiceQuestionChoiceSerializer,
     MultipleChoiceQuestionSerializer,
@@ -123,7 +124,7 @@ def setup_course_data():
 
 
 @pytest.mark.django_db
-class TestCourseSerializer:
+class TestCourseDetailSerializer:
     """
     CourseSerializer 테스트
     """
@@ -133,7 +134,7 @@ class TestCourseSerializer:
         self.course = setup_course_data["course"]
 
         # When
-        serializer = CourseSerializer(self.course)
+        serializer = CourseDetailSerializer(self.course)
         data = serializer.data
 
         # Then
@@ -272,7 +273,40 @@ class TestCourseSerializer:
         }
 
         # When
-        serializer = CourseSerializer(data=data)
+        serializer = CourseDetailSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        # Then
+        assert serializer.validated_data == data
+
+
+@pytest.mark.django_db
+class TestCourseSummarySerializer:
+    def test_course_직렬화(self, setup_course_data):
+        # Given
+        course = setup_course_data["course"]
+
+        # When
+        serializer = CourseSummarySerializer(course)
+        data = serializer.data
+
+        # Then
+        assert data["title"] == COURSE_TITLE
+        assert data["short_description"] == COURSE_SHORT_DESCRIPTION
+        assert data["category"] == COURSE_CATEGORY
+        assert data["course_level"] == COURSE_COURSE_LEVEL
+
+    def test_course_역직렬화(self):
+        # Given
+        data = {
+            "title": "Test Course",
+            "short_description": "Test Course",
+            "category": "JavaScript",
+            "course_level": "beginner",
+        }
+
+        # When
+        serializer = CourseSummarySerializer(data=data)
         serializer.is_valid(raise_exception=True)
 
         # Then

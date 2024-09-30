@@ -34,9 +34,8 @@ class JWTAuthenticationTest(TestCase):
 
     def test_login_success(self):
         """
-        1. `test_login_success`:
-          - 올바른 이메일과 비밀번호로 로그인 성공을 확인
-          - 응답에 access_token과 refresh_token이 포함되어 있는지 확인
+        - 올바른 이메일과 비밀번호로 로그인 성공을 확인
+        - 응답에 access_token과 refresh_token이 포함되어 있는지 확인
         """
         response = self.client.post(
             self.login_url,
@@ -49,8 +48,7 @@ class JWTAuthenticationTest(TestCase):
 
     def test_login_fail(self):
         """
-        2. `test_login_fail`:
-          - 잘못된 비밀번호로 로그인 실패를 확인
+        - 잘못된 비밀번호로 로그인 실패를 확인
         """
         response = self.client.post(
             self.login_url,
@@ -61,9 +59,8 @@ class JWTAuthenticationTest(TestCase):
 
     def test_logout(self):
         """
-        3. `test_logout`:
-          - 로그아웃 과정을 테스트
-          - 로그아웃 후 refresh 토큰이 블랙리스트에 추가되었는지 확인
+        - 로그아웃 과정을 테스트
+        - 로그아웃 후 refresh 토큰이 블랙리스트에 추가되었는지 확인
         """
         access_token = generate_access_token(self.user)
         refresh_token = generate_refresh_token(self.user)
@@ -76,9 +73,8 @@ class JWTAuthenticationTest(TestCase):
 
     def test_refresh_token(self):
         """
-        4. `test_refresh_token`:
-          - 새로운 access_token과 refresh_token을 받는 과정을 테스트
-          - 이전 refresh 토큰이 블랙리스트에 추가되었는지 확인
+        - 새로운 access_token과 refresh_token을 받는 과정을 테스트
+        - 이전 refresh 토큰이 블랙리스트에 추가되었는지 확인
         """
         refresh_token = generate_refresh_token(self.user)
         response = self.client.post(
@@ -91,8 +87,7 @@ class JWTAuthenticationTest(TestCase):
 
     def test_refresh_token_blacklisted(self):
         """
-        5. `test_refresh_token_blacklisted`:
-          - 이미 블랙리스트에 있는 refresh 토큰으로 요청 시 실패하는지 확인
+        - 이미 블랙리스트에 있는 refresh 토큰으로 요청 시 실패하는지 확인
         """
         refresh_token = generate_refresh_token(self.user)
         BlacklistedToken.objects.create(
@@ -105,8 +100,7 @@ class JWTAuthenticationTest(TestCase):
 
     def test_refresh_token_expired(self):
         """
-        6. `test_refresh_token_expired`:
-          - 만료된 refresh 토큰으로 요청 시 실패하는지 확인
+        - 만료된 refresh 토큰으로 요청 시 실패하는지 확인
         """
         payload = {
             "user_id": self.user.id,
@@ -120,8 +114,7 @@ class JWTAuthenticationTest(TestCase):
 
     def test_authentication_success(self):
         """
-        7. `test_authentication_success`:
-          - 유효한 access 토큰으로 인증이 성공하는지 확인
+        - 유효한 access 토큰으로 인증이 성공하는지 확인
 
         """
         access_token = generate_access_token(self.user)
@@ -133,8 +126,7 @@ class JWTAuthenticationTest(TestCase):
 
     def test_authentication_fail_invalid_token(self):
         """
-        8. `test_authentication_fail_invalid_token`:
-          - 유효하지 않은 토큰으로 인증 시 실패하는지 확인
+        - 유효하지 않은 토큰으로 인증 시 실패하는지 확인
         """
         request = self.factory.get("/")
         request.META["HTTP_AUTHORIZATION"] = "Bearer invalidtoken"
@@ -143,8 +135,7 @@ class JWTAuthenticationTest(TestCase):
 
     def test_authentication_fail_expired_token(self):
         """
-        9. `test_authentication_fail_expired_token`:
-          - 만료된 access 토큰으로 인증 시 실패하는지 확인
+        - 만료된 access 토큰으로 인증 시 실패하는지 확인
         """
         payload = {
             "user_id": self.user.id,
@@ -160,8 +151,7 @@ class JWTAuthenticationTest(TestCase):
 
     def test_authentication_no_token(self):
         """
-        10. `test_authentication_no_token`:
-          - 토큰이 없는 경우 인증 결과가 None인지 확인
+        - 토큰이 없는 경우 인증 결과가 None인지 확인
         """
         request = self.factory.get("/")
         result = self.jwt_auth.authenticate(request)

@@ -14,7 +14,7 @@ class IsAuthenticatedOrCreateOnly(BaseAuthPermission):
 
     def has_permission(self, request, view):
         if request.method == "GET":
-            return self.is_authenticated(request)
+            return super().has_permission(request, view)
         elif request.method == "POST":
             return True
         return False
@@ -26,7 +26,7 @@ class IsAuthenticatedAndTutor(BaseAuthPermission):
     """
 
     def has_permission(self, request, view):
-        return self.is_authenticated(request) and request.user.is_staff
+        return super().has_permission(request, view) and request.user.is_staff
 
 
 class IsAuthenticatedAndSuperUser(BaseAuthPermission):
@@ -35,7 +35,7 @@ class IsAuthenticatedAndSuperUser(BaseAuthPermission):
     """
 
     def has_permission(self, request, view):
-        return self.is_authenticated(request) and request.user.is_superuser
+        return super().has_permission(request, view) and request.user.is_superuser
 
 
 class IsTutorOrSuperUserOrSuperUserCreateOnly(BaseAuthPermission):
@@ -45,7 +45,7 @@ class IsTutorOrSuperUserOrSuperUserCreateOnly(BaseAuthPermission):
     """
 
     def has_permission(self, request, view):
-        if not self.is_authenticated(request):
+        if not super().has_permission(request, view):
             return False
 
         if request.method == "GET":

@@ -1,6 +1,8 @@
-from django.contrib import admin
 from django.urls import path
 
+from .views import CourseListCreateView
 
-
-urlpatterns = []
+app_name = "courses"
+urlpatterns = [
+    path("courses/", CourseListCreateView.as_view(), name="course-list"),
+]

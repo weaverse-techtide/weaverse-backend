@@ -9,7 +9,7 @@ def generate_access_token(user):
         "user_id": user.id,
         "is_staff": user.is_staff,
         "is_superuser": user.is_superuser,
-        "exp": timezone.now() + timedelta(minutes=5),
+        "exp": timezone.now() + timedelta(minutes=30),
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
@@ -17,6 +17,6 @@ def generate_access_token(user):
 def generate_refresh_token(user):
     payload = {
         "user_id": user.id,
-        "exp": timezone.now() + timedelta(minutes=120),
+        "exp": timezone.now() + timedelta(days=14),
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")

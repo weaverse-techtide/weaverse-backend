@@ -40,10 +40,12 @@ class MultipleChoiceQuestionSerializer(serializers.ModelSerializer):
     """
 
     multiple_choice_question_choices = MultipleChoiceQuestionChoiceSerializer(many=True)
+    id = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = MultipleChoiceQuestion
         fields = [
+            "id",
             "question",
             "created_at",
             "updated_at",

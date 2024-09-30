@@ -138,6 +138,7 @@ class TestCourseDetailSerializer:
         data = serializer.data
 
         # Then
+        assert data["id"] == self.course.id
         assert data["title"] == COURSE_TITLE
         assert data["short_description"] == COURSE_SHORT_DESCRIPTION
         assert data["description"] == COURSE_DESCRIPTION
@@ -291,6 +292,7 @@ class TestCourseSummarySerializer:
         data = serializer.data
 
         # Then
+        assert data["id"] == course.id
         assert data["title"] == COURSE_TITLE
         assert data["short_description"] == COURSE_SHORT_DESCRIPTION
         assert data["category"] == COURSE_CATEGORY
@@ -325,6 +327,7 @@ class TestLectureSerializer:
         data = serializer.data
 
         # Then
+        assert data["id"] == self.lecture.id
         assert data["title"] == LECTURE2_TITLE
         assert data["order"] == 2
         assert len(data["topics"]) == 1
@@ -437,6 +440,7 @@ class TestTopicSerializer:
         data = serializer.data
 
         # Then
+        assert data["id"] == self.topic.id
         assert data["title"] == TOPIC2_TITLE
         assert data["type"] == TOPIC2_TYPE
         assert data["description"] == TOPIC2_DESCRIPTION
@@ -535,14 +539,18 @@ class TestAssignmentSerializer:
         data = serializer.data
 
         # Then
+        assert data["id"] == assignment.id
         assert data["question"] == "Test Assignment"
 
     def test_assignment_역직렬화(self):
+        # Given
         data = {"question": "Test Assignment"}
 
+        # When
         serializer = AssignmentSerializer(data=data)
         serializer.is_valid(raise_exception=True)
 
+        # Then
         assert serializer.validated_data == data
         assert serializer.validated_data["question"] == "Test Assignment"
 
@@ -558,6 +566,7 @@ class TestMultipleChoiceQuestionChoiceSerializer:
         data = serializer.data
 
         # Then
+        assert data["id"] == mcq_choice.id
         assert data["choice"] == "Choice 1"
         assert data["is_correct"] is True
 
@@ -586,6 +595,7 @@ class TestMultipleChoiceQuestionSerializer:
         data = serializer.data
 
         # Then
+        assert data["id"] == self.mcq.id
         assert data["question"] == "Test Multiple Choice Question"
         assert len(data["multiple_choice_question_choices"]) == 4
         assert data["multiple_choice_question_choices"][0]["choice"] == "Choice 1"

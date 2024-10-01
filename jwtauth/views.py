@@ -1,15 +1,16 @@
-from rest_framework.views import APIView
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 from django.contrib.auth import authenticate, get_user_model
 from django.conf import settings
-from .utils import generate_access_token, generate_refresh_token
-from .models import BlacklistedToken
-from rest_framework.permissions import IsAuthenticated, AllowAny
-import jwt
-from accounts.models import CustomUser
 from .serializers import LoginSerializer, LogoutSerializer, RefreshTokenSerializer
-from rest_framework.generics import GenericAPIView
+from .utils.token_generator import generate_access_token, generate_refresh_token
+from .models import BlacklistedToken
+import jwt, logging
+
+logger = logging.getLogger(__name__)
+User = get_user_model()
 
 
 class LoginView(GenericAPIView):
@@ -65,22 +66,18 @@ class LogoutView(GenericAPIView):
             try:
                 BlacklistedToken.objects.create(token=refresh_token, user=request.user)
                 return Response(
-                    {
-                        "success": "로그아웃 완료. refresh 토큰이 블랙리스트에 추가되었습니다."
-                    },
+                    {"success": "로그아웃 완료."},
                     status=status.HTTP_200_OK,
                 )
 
             except Exception as e:
+                logger.error(f"블랙리스트에 추가하는 중 오류 발생: {str(e)}")
                 return Response(
-                    {"error": f"블랙리스트에 추가하는 중 오류 발생: {str(e)}"},
+                    {"error": "로그아웃 중 오류 발생."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-User = get_user_model()
 
 
 class RefreshTokenView(GenericAPIView):
@@ -123,17 +120,18 @@ class RefreshTokenView(GenericAPIView):
 
             except jwt.ExpiredSignatureError:
                 return Response(
-                    {"error": "리프레시 토큰이 만료되었습니다."},
+                    {"error": "인증 요청이 유효하지 않습니다."},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
             except (jwt.DecodeError, User.DoesNotExist):
                 return Response(
-                    {"error": "유효하지 않은 리프레시 토큰입니다."},
+                    {"error": "인증 요청이 유효하지 않습니다."},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
             except Exception as e:
+                logger.error(f"토큰 갱신 중 오류 발생: {str(e)}")
                 return Response(
-                    {"error": f"토큰 갱신 중 오류 발생: {str(e)}"},
+                    {"error": "인증 중 오류 발생, 나중에 다시 시도해주세요."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
         else:

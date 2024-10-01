@@ -132,6 +132,19 @@ class CourseListCreateView(CourseMixin, generics.ListCreateAPIView):
         )
 
 
+@extend_schema_view(
+    get=extend_schema(
+        summary="Curriculum 목록을 조회하는 API",
+        description="Curriculum 목록을 조회합니다. 누구나 조회할 수 있습니다.",
+        responses={200: CurriculumSummarySerializer},
+    ),
+    post=extend_schema(
+        summary="Curriculum를 생성하는 API",
+        description="Curriculum를 생성합니다. staff만 생성할 수 있습니다.",
+        request=CurriculumCreateAndUpdateSerializer,
+        responses={201: CurriculumReadSerializer},
+    ),
+)
 class CurriculumListCreateView(generics.ListCreateAPIView):
     """
     curriculum 목록을 조회하거나 새로운 curriculum을 생성합니다.
@@ -167,6 +180,30 @@ class CurriculumListCreateView(generics.ListCreateAPIView):
         Course.objects.filter(id__in=courses_ids).update(curriculum=curriculum)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        summary="Curriculum를 조회하는 API",
+        description="특정 Curriculum를 조회합니다. 누구나 조회할 수 있습니다.",
+        responses={200: CurriculumReadSerializer},
+    ),
+    put=extend_schema(
+        summary="Curriculum를 수정하는 API",
+        description="특정 Curriculum를 수정합니다. staff만 수정할 수 있습니다.",
+        request=CurriculumCreateAndUpdateSerializer,
+        responses={200: CurriculumReadSerializer},
+    ),
+    patch=extend_schema(
+        summary="Curriculum를 부분 수정하는 API",
+        description="특정 Curriculum를 부분 수정합니다. staff만 수정할 수 있습니다.",
+        request=CurriculumCreateAndUpdateSerializer,
+        responses={200: CurriculumReadSerializer},
+    ),
+    delete=extend_schema(
+        summary="Curriculum를 삭제하는 API",
+        description="특정 Curriculum를 삭제합니다. staff만 삭제할 수 있습니다.",
+        responses={204: None},
+    ),
+)
 class CurriculumDetailRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     """
     curriculum를 조회하거나 수정하거나 삭제합니다.

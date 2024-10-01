@@ -37,13 +37,7 @@ class CourseMixin:
         course 및 하위 모델 lecture, topic, assignment, quiz 등을 함께 수정합니다.
         """
 
-        course.title = course_data.get("title")
-        course.short_description = course_data.get("short_description")
-        course.description = course_data.get("description")
-        course.category = course_data.get("category")
-        course.course_level = course_data.get("course_level")
-        course.price = course_data.get("price")
-        course.save()
+        course.update(**course_data)
 
         course.lectures.all().delete()
         for lecture_data in lectures_data:

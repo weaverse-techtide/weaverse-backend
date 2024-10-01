@@ -4,6 +4,7 @@ from django.db import models
 class Curriculum(models.Model):
     name = models.CharField(max_length=255, verbose_name="커리큘럼 이름")
     description = models.TextField(verbose_name="설명")
+    price = models.PositiveIntegerField(verbose_name="가격")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -47,6 +48,7 @@ class Course(models.Model):
         choices=course_level_choices,
         default="beginner",
     )
+    price = models.PositiveIntegerField(verbose_name="가격")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

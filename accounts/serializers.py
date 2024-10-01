@@ -65,13 +65,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         """
         모델 인스턴스를 Python의 기본 데이터 타입(주로 딕셔너리)으로 변환합니다.
-        - 보안을 위해 is_staff, user_type, date_joined 필드를 직렬화에서 제외합니다.
-        - 사용자 유형에 따라 특정 필드를 직렬화에서 제외합니다.
-        """
-
-    def to_representation(self, instance):
-        """
-        모델 인스턴스를 Python의 기본 데이터 타입(주로 딕셔너리)으로 변환합니다.
         - 보안을 위해 is_staff, date_joined 필드를 직렬화에서 제외합니다.
         - 사용자 유형에 따라 특정 필드(student_count, tutor_count)를 직렬화에서 제외합니다.
         """

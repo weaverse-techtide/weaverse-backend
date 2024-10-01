@@ -2,7 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from courses.models import Course
+from courses.models import Course, Curriculum
 from courses.test import conftest
 
 
@@ -382,10 +382,284 @@ class TestCourseList:
         # Then
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 5
+
+
+@pytest.mark.django_db
+class TestCurriculumList:
+
+    def test_curriculum_생성_요청(self, api_client, setup_course_data):
+        # Given
+        url = reverse("courses:curriculum-list")
+        api_client.login(
+            username=conftest.TEST_STAFF_USER_EMAIL,
+            password=conftest.TEST_STAFF_USER_PASSWORD,
+        )
+        data = {
+            "name": "Test Curriculum",
+            "description": "Test Description",
+            "price": 1000,
+            "courses_ids": [setup_course_data["course"].id],
+        }
+
+        # When
+        response = api_client.post(url, data, format="json")
+
+        # Then
+        assert response.status_code == status.HTTP_201_CREATED
+
+    def test_curriculum_생성_요청_실패_일반유저인_경우(
+        self, api_client, setup_course_data
+    ):
+        # Given
+        url = reverse("courses:curriculum-list")
+        api_client.login(
+            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
+        )
+        data = {
+            "name": "Test Curriculum",
+            "description": "Test Description",
+            "price": 1000,
+            "courses_ids": [setup_course_data["course"].id],
+        }
+
+        # When
+        response = api_client.post(url, data, format="json")
+
+        # Then
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {
+            "detail": "이 작업을 수행할 권한(permission)이 없습니다."
+        }
+
+    def test_curriculum_생성_요청_실패_로그인하지않은경우(
+        self, api_client, setup_course_data
+    ):
+        # Given
+        url = reverse("courses:curriculum-list")
+        data = {
+            "name": "Test Curriculum",
+            "description": "Test Description",
+            "price": 1000,
+            "courses_ids": [setup_course_data["course"].id],
+        }
+
+        # When
+        response = api_client.post(url, data, format="json")
+
+        # Then
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {
+            "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
+        }
+
+    def test_curriculum_목록_조회(self, api_client, setup_course_data):
+        # Given
         for i in range(5):
-            assert response.data[i]["title"] == f"Test Course {i}"
-            assert response.data[i]["short_description"] == "Test Course"
-            assert response.data[i]["category"] == "JavaScript"
-            assert response.data[i]["course_level"] == "beginner"
-            assert response.data[i]["created_at"] is not None
-            assert response.data[i]["updated_at"] is not None
+            Curriculum.objects.create(
+                name=f"Test Curriculum {i}",
+                description="Test Description",
+                price=1000,
+            )
+        url = reverse("courses:curriculum-list")
+        api_client.login(
+            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
+        )
+
+        # When
+        response = api_client.get(url)
+
+        # Then
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 5
+
+
+@pytest.mark.django_db
+class TestCurriculumDetail:
+
+    def test_curriculum_조회(self, api_client, setup_course_data):
+        # Given
+        curriculum = Curriculum.objects.create(
+            name="Test Curriculum",
+            description="Test Description",
+            price=1000,
+        )
+        url = reverse("courses:curriculum-detail", args=[curriculum.id])
+        course = setup_course_data["course"]
+        course.curriculum = curriculum
+        course.save()
+        api_client.login(
+            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
+        )
+
+        # When
+        response = api_client.get(url)
+
+        # Then
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["name"] == "Test Curriculum"
+        assert response.data["description"] == "Test Description"
+        assert response.data["price"] == 1000
+        assert response.data["created_at"] is not None
+        assert response.data["updated_at"] is not None
+        assert len(response.data["courses"]) == 1
+
+    def test_curriculum_수정(self, api_client, setup_course_data):
+        # Given
+        curriculum = Curriculum.objects.create(
+            name="Test Curriculum",
+            description="Test Description",
+            price=1000,
+        )
+        url = reverse("courses:curriculum-detail", args=[curriculum.id])
+        api_client.login(
+            username=conftest.TEST_STAFF_USER_EMAIL,
+            password=conftest.TEST_STAFF_USER_PASSWORD,
+        )
+        data = {
+            "name": "Updated Test Curriculum",
+            "description": "Updated Test Description",
+            "price": 2000,
+            "courses_ids": [setup_course_data["course"].id],
+        }
+
+        # When
+        response = api_client.put(url, data, format="json")
+
+        # Then
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["name"] == "Updated Test Curriculum"
+        assert response.data["description"] == "Updated Test Description"
+        assert response.data["price"] == 2000
+
+    def test_curriculum_수정_실패_일반유저인_경우(self, api_client, setup_course_data):
+        # Given
+        curriculum = Curriculum.objects.create(
+            name="Test Curriculum",
+            description="Test Description",
+            price=1000,
+        )
+        url = reverse("courses:curriculum-detail", args=[curriculum.id])
+        api_client.login(
+            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
+        )
+        data = {
+            "name": "Updated Test Curriculum",
+            "description": "Updated Test Description",
+            "price": 2000,
+            "courses_ids": [setup_course_data["course"].id],
+        }
+
+        # When
+        response = api_client.put(url, data, format="json")
+
+        # Then
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {
+            "detail": "이 작업을 수행할 권한(permission)이 없습니다."
+        }
+
+    def test_curriculum_수정_실패_로그인하지않은경우(
+        self, api_client, setup_course_data
+    ):
+        # Given
+        curriculum = Curriculum.objects.create(
+            name="Test Curriculum",
+            description="Test Description",
+            price=1000,
+        )
+        url = reverse("courses:curriculum-detail", args=[curriculum.id])
+        data = {
+            "name": "Updated Test Curriculum",
+            "description": "Updated Test Description",
+            "price": 2000,
+            "courses_ids": [setup_course_data["course"].id],
+        }
+
+        # When
+        response = api_client.put(url, data, format="json")
+
+        # Then
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {
+            "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
+        }
+
+    def test_curriculum_삭제(self, api_client):
+        # Given
+        curriculum = Curriculum.objects.create(
+            name="Test Curriculum",
+            description="Test Description",
+            price=1000,
+        )
+        url = reverse("courses:curriculum-detail", args=[curriculum.id])
+        api_client.login(
+            username=conftest.TEST_STAFF_USER_EMAIL,
+            password=conftest.TEST_STAFF_USER_PASSWORD,
+        )
+
+        # When
+        response = api_client.delete(url)
+
+        # Then
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert Curriculum.objects.count() == 0
+
+    def test_curriculum_삭제_실패_일반유저인_경우(self, api_client):
+        # Given
+        curriculum = Curriculum.objects.create(
+            name="Test Curriculum",
+            description="Test Description",
+            price=1000,
+        )
+        url = reverse("courses:curriculum-detail", args=[curriculum.id])
+        api_client.login(
+            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
+        )
+
+        # When
+        response = api_client.delete(url)
+
+        # Then
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {
+            "detail": "이 작업을 수행할 권한(permission)이 없습니다."
+        }
+
+    def test_curriculum_삭제_실패_로그인하지않은경우(self, api_client):
+        # Given
+        curriculum = Curriculum.objects.create(
+            name="Test Curriculum",
+            description="Test Description",
+            price=1000,
+        )
+        url = reverse("courses:curriculum-detail", args=[curriculum.id])
+
+        # When
+        response = api_client.delete(url)
+
+        # Then
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {
+            "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
+        }
+
+    def test_curriculum_수정_실패_존재하지않는_curriculum인_경우(self, api_client):
+        # Given
+        url = reverse("courses:curriculum-detail", args=[1])
+        api_client.login(
+            username=conftest.TEST_STAFF_USER_EMAIL,
+            password=conftest.TEST_STAFF_USER_PASSWORD,
+        )
+        data = {
+            "name": "Updated Test Curriculum",
+            "description": "Updated Test Description",
+            "price": 2000,
+            "courses_ids": [],
+        }
+
+        # When
+        response = api_client.put(url, data, format="json")
+
+        # Then
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.data is not None

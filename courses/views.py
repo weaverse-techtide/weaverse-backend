@@ -4,9 +4,15 @@ from rest_framework import generics
 from rest_framework.response import Response
 
 from .mixins import CourseMixin
-from .models import Course
+from .models import Course, Curriculum
 from .permissions import IsStaffOrReadOnly
-from .serializers import CourseDetailSerializer, CourseSummarySerializer
+from .serializers import (
+    CourseDetailSerializer,
+    CourseSummarySerializer,
+    CurriculumCreateAndUpdateSerializer,
+    CurriculumReadSerializer,
+    CurriculumSummarySerializer,
+)
 
 
 @extend_schema_view(
@@ -124,3 +130,81 @@ class CourseListCreateView(CourseMixin, generics.ListCreateAPIView):
         self.create_course_with_lectures_and_topics(
             serializer.data, serializer.data.get("lectures", [])
         )
+
+
+class CurriculumListCreateView(generics.ListCreateAPIView):
+    """
+    curriculum 목록을 조회하거나 새로운 curriculum을 생성합니다.
+    """
+
+    queryset = Curriculum.objects.all()
+    serializer_class = CurriculumSummarySerializer
+    permission_classes = [IsStaffOrReadOnly]
+
+    def get_serializer_class(self):
+        """
+        요청 메서드에 따라 다른 serializer를 반환합니다.
+
+        - POST: CurriculumCreateAndUpdateSerializer
+        - 그 외: CurriculumSummarySerializer
+        """
+
+        if self.request.method == "POST":
+            return CurriculumCreateAndUpdateSerializer
+        return CurriculumSummarySerializer
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        """
+        curriculum을 생성합니다.
+        """
+        curriculum = Curriculum.objects.create(
+            name=serializer.data.get("name"),
+            description=serializer.data.get("description"),
+            price=serializer.data.get("price"),
+        )
+        courses_ids = serializer.data.get("courses_ids", [])
+        Course.objects.filter(id__in=courses_ids).update(curriculum=curriculum)
+
+
+class CurriculumDetailRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    curriculum를 조회하거나 수정하거나 삭제합니다.
+    """
+
+    queryset = Curriculum.objects.all()
+    serializer_class = CurriculumReadSerializer
+    permission_classes = [IsStaffOrReadOnly]
+
+    def get_serializer_class(self):
+        """
+        요청 메서드에 따라 다른 serializer를 반환합니다.
+
+        - PUT, PATCH: CurriculumCreateAndUpdateSerializer
+        - 그 외: CurriculumReadSerializer
+        """
+
+        if self.request.method in ["PUT", "PATCH"]:
+            return CurriculumCreateAndUpdateSerializer
+        return CurriculumReadSerializer
+
+    @transaction.atomic
+    def update(self, request, *args, **kwargs):
+        """
+        curriculum을 수정합니다.
+        """
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        curriculum = self.get_object()
+        curriculum.name = serializer.data.get("name")
+        curriculum.description = serializer.data.get("description")
+        curriculum.price = serializer.data.get("price")
+        curriculum.save()
+        Course.objects.filter(curriculum=curriculum).update(curriculum=None)
+        courses_ids = serializer.data.get("courses_ids", [])
+        Course.objects.filter(id__in=courses_ids).update(curriculum=curriculum)
+        if getattr(curriculum, "_prefetched_objects_cache", None):
+            curriculum._prefetched_objects_cache = {}
+        serializer = CurriculumReadSerializer(curriculum)
+        return Response(serializer.data)

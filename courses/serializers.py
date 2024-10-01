@@ -175,3 +175,21 @@ class CurriculumCreateAndUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Curriculum
         fields = ["id", "name", "price", "description", "courses_ids"]
+
+
+class CurriculumSummarySerializer(serializers.ModelSerializer):
+    """
+    Curriculum 모델을 위한 Serializer입니다. 직렬화 할 때만 사용합니다.
+    """
+
+    id = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Curriculum
+        fields = [
+            "id",
+            "name",
+            "price",
+            "created_at",
+            "updated_at",
+        ]

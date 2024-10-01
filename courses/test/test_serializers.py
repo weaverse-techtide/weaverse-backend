@@ -7,6 +7,7 @@ from courses.serializers import (
     CourseSummarySerializer,
     CurriculumCreateAndUpdateSerializer,
     CurriculumReadSerializer,
+    CurriculumSummarySerializer,
     LectureSerializer,
     MultipleChoiceQuestionChoiceSerializer,
     MultipleChoiceQuestionSerializer,
@@ -616,3 +617,22 @@ class TestCurriculumReadSerializer:
         assert serializer.data["description"] == "Test Description"
         assert serializer.data["price"] == 1000
         assert serializer.data["courses"] is not None
+
+@pytest.mark.django_db
+class TestCurriculumSummarySerializer:
+
+    def test_curriculum_직렬화(self):
+        # Given
+        curriculum = Curriculum.objects.create(
+            name="Test Curriculum", description="Test Description", price=1000
+        )
+
+        # When
+        serializer = CurriculumSummarySerializer(curriculum)
+
+        # Then
+        assert serializer.data["id"] == curriculum.id
+        assert serializer.data["name"] == "Test Curriculum"
+        assert serializer.data["price"] == 1000
+        assert serializer.data["created_at"] is not None
+        assert serializer.data["updated_at"] is not None

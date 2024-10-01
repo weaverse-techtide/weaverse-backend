@@ -52,6 +52,20 @@ class Course(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def update(self, **kwargs):
+        for key, value in kwargs.items():
+            if key not in [
+                "title",
+                "short_description",
+                "description",
+                "category",
+                "course_level",
+                "price",
+            ]:
+                continue
+            setattr(self, key, value)
+        self.save()
+
     def __str__(self):
         return f"{self.title}"
 

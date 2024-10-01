@@ -27,7 +27,7 @@ class IsAuthenticatedOrCreateOnly(BaseAuthPermission):
         return False
 
 
-class IsAuthenticatedAndTutor(BaseAuthPermission):
+class IsTutor(BaseAuthPermission):
     """
     권한 값으로 True/False를 반환합니다.
     - 요청 유형과 관계없이 강사(Tutor)이면 권한을 허용합니다.
@@ -37,7 +37,7 @@ class IsAuthenticatedAndTutor(BaseAuthPermission):
         return super().has_permission(request, view) and request.user.is_staff
 
 
-class IsAuthenticatedAndSuperUser(BaseAuthPermission):
+class IsSuperUser(BaseAuthPermission):
     """
     권한 값으로 True/False를 반환합니다.
     - 요청 유형과 관계없이 관리자(superuser)이면 권한을 허용합니다.

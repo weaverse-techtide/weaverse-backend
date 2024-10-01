@@ -8,9 +8,9 @@ from rest_framework.response import Response
 
 from .models import CustomUser
 from .permissions import (
-    IsAuthenticatedAndSuperUser,
-    IsAuthenticatedAndTutor,
     IsAuthenticatedOrCreateOnly,
+    IsSuperUser,
+    IsTutor,
     IsTutorOrSuperUserOrSuperUserCreateOnly,
 )
 from .serializers import CustomUserSerializer
@@ -78,13 +78,22 @@ def student_retrieve_update_delete(request, pk):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticatedAndTutor, IsAuthenticatedAndSuperUser])
+@permission_classes([IsTutor, IsSuperUser])
 def student_count(request):
     """
-    활동 중인 학생 사용자 수 조회합니다.
+    활동 중인 학생 사용자 수를 조회합니다.
+    - 이 정보는 시리얼라이저를 통해 계산됩니다.
     """
-    count = CustomUser.objects.filter(is_staff=False, is_active=True).count()
-    return Response({"count": count})  # 학생 수 조회에 대한 응답 구조
+    serializer = CustomUserSerializer(request.user)
+    data = serializer.data
+
+    if "student_count" in data:
+        return Response({"count": data["student_count"]})
+    else:
+        return Response(
+            {"error": "학생 수 정보를 조회할 권한이 없습니다."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
 
 @api_view(["GET", "POST"])
@@ -107,7 +116,7 @@ def tutor_list_create(request):
 
 
 @api_view(["GET", "PUT", "DELETE"])
-@permission_classes([IsAuthenticatedAndTutor, IsAuthenticatedAndSuperUser])
+@permission_classes([IsTutor, IsSuperUser])
 def tutor_retrieve_update_delete(request, pk):
     """
     관리자 사용자 조회, 수정, 삭제합니다.

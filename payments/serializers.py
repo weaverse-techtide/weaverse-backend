@@ -42,7 +42,7 @@ class CartItemSerializer(serializers.ModelSerializer):
 
 class CartSerializer(serializers.ModelSerializer):
     """
-    장바구니 모델의 시리얼라이저입니다. 상품의 수량 필드를 포함합니다.
+    장바구니 모델의 시리얼라이저입니다.
     """
 
     items = CartItemSerializer(many=True, read_only=True)

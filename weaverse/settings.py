@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "jwtauth",
     "courses",
     "materials",
+    "payments",
 ]
 
 MIDDLEWARE = [

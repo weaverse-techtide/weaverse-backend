@@ -1,9 +1,12 @@
 import pytest
 
+from courses.models import Curriculum
 from courses.serializers import (
     AssignmentSerializer,
     CourseDetailSerializer,
     CourseSummarySerializer,
+    CurriculumCreateAndUpdateSerializer,
+    CurriculumReadSerializer,
     LectureSerializer,
     MultipleChoiceQuestionChoiceSerializer,
     MultipleChoiceQuestionSerializer,
@@ -567,3 +570,49 @@ class TestMultipleChoiceQuestionSerializer:
             ]
             is False
         )
+
+
+@pytest.mark.django_db
+class TestCurriculumCreateAndUpdateSerializer:
+
+    def test_curriculum_create_and_update_역직렬화(self):
+        # Given
+        data = {
+            "name": "Test Curriculum",
+            "description": "Test Description",
+            "price": 1000,
+            "courses_ids": [1, 2, 3],
+        }
+
+        # When
+        serializer = CurriculumCreateAndUpdateSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        # Then
+        assert serializer.validated_data == data
+        assert serializer.validated_data["name"] == "Test Curriculum"
+        assert serializer.validated_data["description"] == "Test Description"
+        assert serializer.validated_data["price"] == 1000
+        assert serializer.validated_data["courses_ids"] == [1, 2, 3]
+
+
+@pytest.mark.django_db
+class TestCurriculumReadSerializer:
+
+    def test_curriculum_직렬화(self, setup_course_data):
+        # Given
+        curriculum = Curriculum.objects.create(
+            name="Test Curriculum", description="Test Description", price=1000
+        )
+        course = setup_course_data["course"]
+        curriculum.courses.add(course)
+
+        # When
+        serializer = CurriculumReadSerializer(curriculum)
+
+        # Then
+        assert serializer.data["id"] == curriculum.id
+        assert serializer.data["name"] == "Test Curriculum"
+        assert serializer.data["description"] == "Test Description"
+        assert serializer.data["price"] == 1000
+        assert serializer.data["courses"] is not None

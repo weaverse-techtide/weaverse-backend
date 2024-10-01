@@ -3,6 +3,7 @@ from rest_framework import serializers
 from .models import (
     Assignment,
     Course,
+    Curriculum,
     Lecture,
     MultipleChoiceQuestion,
     MultipleChoiceQuestionChoice,
@@ -136,3 +137,41 @@ class CourseSummarySerializer(serializers.ModelSerializer):
             "updated_at",
             "course_level",
         ]
+
+
+class CurriculumReadSerializer(serializers.ModelSerializer):
+    """
+    Curriculum 모델을 조회하기 위한 Serializer입니다. 직렬화 할 때만 사용합니다.
+    """
+
+    id = serializers.IntegerField(read_only=True)
+    courses = CourseSummarySerializer(
+        many=True,
+    )
+
+    class Meta:
+        model = Curriculum
+        fields = [
+            "id",
+            "name",
+            "price",
+            "description",
+            "courses",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class CurriculumCreateAndUpdateSerializer(serializers.ModelSerializer):
+    """
+    Curriculum 모델을 생성 및 수정을 위한 Serializer입니다. 역직렬화 할 때만 사용합니다.
+    """
+
+    id = serializers.IntegerField(required=False)
+    courses_ids = serializers.ListField(
+        child=serializers.IntegerField(), write_only=True
+    )
+
+    class Meta:
+        model = Curriculum
+        fields = ["id", "name", "price", "description", "courses_ids"]

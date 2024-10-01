@@ -5,8 +5,12 @@ from . import views
 app_name = "accounts"
 
 urlpatterns = [
-    path("users/", views.user_list_create, name="user-list-create"),
-    path("users/<int:pk>/", views.user_retrieve_update_delete, name="user-detail"),
-    path("users/counts/", views.user_count, name="user-count"),
-    path("managers/", views.manager_list_create, name="manager-list-create"),
+    path("students/", views.student_list_create, name="student-list-create"),
+    path(
+        "students/<int:pk>/",
+        views.student_retrieve_update_delete,
+        name="student-detail",
+    ),
+    path("students/counts/", views.student_count, name="student-count"),
+    path("tutors/", views.tutor_list_create, name="tutor-list-create"),
 ]

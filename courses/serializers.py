@@ -114,6 +114,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             "updated_at",
             "lectures",
             "course_level",
+            "price",
         ]
 
 

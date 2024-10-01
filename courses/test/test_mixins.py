@@ -1,14 +1,7 @@
 import pytest
 
 from courses.mixins import CourseMixin
-from courses.models import (
-    Assignment,
-    Course,
-    Lecture,
-    MultipleChoiceQuestion,
-    MultipleChoiceQuestionChoice,
-    Topic,
-)
+from courses.models import Course, Lecture, MultipleChoiceQuestion, Topic
 
 
 @pytest.mark.django_db
@@ -23,6 +16,7 @@ class TestCourseMixin:
             "description": "course_description",
             "category": "JavaScript",
             "course_level": "beginner",
+            "price": 10000,
         }
         lectures_data = [
             {
@@ -111,6 +105,7 @@ class TestCourseMixin:
         assert course.description == course_data["description"]
         assert course.category == course_data["category"]
         assert course.course_level == course_data["course_level"]
+        assert course.price == course_data["price"]
 
         lectures = course.lectures.all()
         assert lectures.count() == 2
@@ -142,6 +137,7 @@ class TestCourseMixin:
             "description": "course_description",
             "category": "JavaScript",
             "course_level": "beginner",
+            "price": 10000,
         }
 
         # When
@@ -168,6 +164,7 @@ class TestCourseMixin:
             course_level="beginner",
             short_description="course_short_description",
             description="course_description",
+            price=10000,
         )
 
         # When
@@ -195,6 +192,7 @@ class TestCourseMixin:
             course_level="beginner",
             short_description="course_short_description",
             description="course_description",
+            price=10000,
         ).lectures.create(title="lecture_title", order=1)
 
         # When
@@ -228,6 +226,7 @@ class TestCourseMixin:
             course_level="beginner",
             short_description="course_short_description",
             description="course_description",
+            price=10000,
         ).lectures.create(title="lecture_title", order=1)
 
         # When
@@ -263,6 +262,7 @@ class TestCourseMixin:
             course_level="beginner",
             short_description="course_short_description",
             description="course_description",
+            price=10000,
         ).lectures.create(title="lecture_title", order=1)
 
         # When
@@ -292,6 +292,7 @@ class TestCourseMixin:
                 course_level="beginner",
                 short_description="course_short_description",
                 description="course_description",
+                price=10000,
             )
             .lectures.create(title="lecture_title", order=1)
             .topics.create(
@@ -329,6 +330,7 @@ class TestCourseMixin:
                 course_level="beginner",
                 short_description="course_short_description",
                 description="course_description",
+                price=10000,
             )
             .lectures.create(title="lecture_title", order=1)
             .topics.create(
@@ -368,6 +370,7 @@ class TestCourseMixin:
             course_level="beginner",
             short_description="course_short_description",
             description="course_description",
+            price=10000,
         )
         lecture = Lecture.objects.create(title="lecture_title", course=course, order=1)
         topic = Topic.objects.create(
@@ -409,6 +412,7 @@ class TestCourseMixin:
             course_level="beginner",
             short_description="course_short_description",
             description="course_description",
+            price=10000,
         )
         lecture = Lecture.objects.create(title="lecture_title", course=course, order=1)
         topic = Topic.objects.create(
@@ -457,6 +461,7 @@ class TestCourseMixin:
             course_level="beginner",
             short_description="course_short_description",
             description="course_description",
+            price=10000,
         )
         course_data = {
             "title": "updated_course_title",
@@ -464,6 +469,7 @@ class TestCourseMixin:
             "description": "updated_course_description",
             "category": "Python",
             "course_level": "intermediate",
+            "price": 20000,
         }
         lectures_data = [
             {
@@ -512,6 +518,7 @@ class TestCourseMixin:
         assert course.description == course_data["description"]
         assert course.category == course_data["category"]
         assert course.course_level == course_data["course_level"]
+        assert course.price == course_data["price"]
         assert course.lectures.count() == 1
         assert course.lectures.first().topics.count() == 2
         assert course.lectures.first().topics.filter(type="assignment").count() == 1

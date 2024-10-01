@@ -58,6 +58,7 @@ class TestCourseDetail:
             "description": {},
             "category": "Python",
             "course_level": "intermediate",
+            "price": 20000,
             "lectures": [
                 {
                     "title": "Updated Test Lecture",
@@ -139,6 +140,7 @@ class TestCourseDetail:
             description={},
             category="JavaScript",
             course_level="beginner",
+            price=10000,
         )
         url = reverse("courses:course-detail", args=[course.id])
         data = {
@@ -147,6 +149,7 @@ class TestCourseDetail:
             "description": {},
             "category": "Python",
             "course_level": "intermediate",
+            "price": 20000,
         }
 
         # When
@@ -166,6 +169,7 @@ class TestCourseDetail:
             description={},
             category="JavaScript",
             course_level="beginner",
+            price=10000,
         )
         url = reverse("courses:course-detail", args=[course.id])
         api_client.login(
@@ -177,6 +181,7 @@ class TestCourseDetail:
             "description": {},
             "category": "Python",
             "course_level": "intermediate",
+            "price": 20000,
         }
 
         # When
@@ -196,6 +201,7 @@ class TestCourseDetail:
             description={},
             category="JavaScript",
             course_level="beginner",
+            price=10000,
         )
         url = reverse("courses:course-detail", args=[course.id])
         api_client.login(
@@ -218,6 +224,7 @@ class TestCourseDetail:
             description={},
             category="JavaScript",
             course_level="beginner",
+            price=10000,
         )
         url = reverse("courses:course-detail", args=[course.id])
 
@@ -238,6 +245,7 @@ class TestCourseDetail:
             description={},
             category="JavaScript",
             course_level="beginner",
+            price=10000,
         )
         url = reverse("courses:course-detail", args=[course.id])
         api_client.login(
@@ -261,6 +269,7 @@ def get_course_data():
         "description": {},
         "category": "JavaScript",
         "course_level": "beginner",
+        "price": 10000,
         "lectures": [
             {
                 "title": "Test Lecture",
@@ -360,6 +369,7 @@ class TestCourseList:
                 description={},
                 category="JavaScript",
                 course_level="beginner",
+                price=10000,
             )
         url = reverse("courses:course-list")
         api_client.login(

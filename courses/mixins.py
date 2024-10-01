@@ -42,6 +42,7 @@ class CourseMixin:
         course.description = course_data.get("description")
         course.category = course_data.get("category")
         course.course_level = course_data.get("course_level")
+        course.price = course_data.get("price")
         course.save()
 
         course.lectures.all().delete()
@@ -62,6 +63,7 @@ class CourseMixin:
             description=course_data.get("description"),
             category=course_data.get("category"),
             course_level=course_data.get("course_level"),
+            price=course_data.get("price"),
         )
 
     def _create_lecture(self, lecture_data, course):

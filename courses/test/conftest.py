@@ -17,6 +17,7 @@ COURSE_SHORT_DESCRIPTION = "Test Course"
 COURSE_DESCRIPTION = {}
 COURSE_CATEGORY = "JavaScript"
 COURSE_COURSE_LEVEL = "beginner"
+COURSE_PRICE = 10000
 LECTURE1_TITLE = "Test Lecture 1"
 LECTURE1_ORDER = 1
 LECTURE2_TITLE = "Test Lecture 2"
@@ -55,6 +56,7 @@ def setup_course_data():
         description=COURSE_DESCRIPTION,
         category=COURSE_CATEGORY,
         course_level=COURSE_COURSE_LEVEL,
+        price=COURSE_PRICE,
     )
     lecture1 = Lecture.objects.create(
         title=LECTURE1_TITLE,

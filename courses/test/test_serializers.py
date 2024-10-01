@@ -33,6 +33,7 @@ class TestCourseDetailSerializer:
         assert data["description"] == conftest.COURSE_DESCRIPTION
         assert data["category"] == conftest.COURSE_CATEGORY
         assert data["course_level"] == conftest.COURSE_COURSE_LEVEL
+        assert data["price"] == conftest.COURSE_PRICE
         assert len(data["lectures"]) == 2
         assert data["lectures"][0]["title"] == conftest.LECTURE1_TITLE
         assert data["lectures"][0]["order"] == conftest.LECTURE1_ORDER
@@ -128,6 +129,7 @@ class TestCourseDetailSerializer:
             "description": {},
             "category": "JavaScript",
             "course_level": "beginner",
+            "price": 10000,
             "lectures": [
                 {
                     "title": "Test Lecture",

@@ -1,4 +1,5 @@
 from django.db import transaction
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import generics
 from rest_framework.response import Response
 
@@ -8,6 +9,30 @@ from .permissions import IsStaffOrReadOnly
 from .serializers import CourseDetailSerializer, CourseSummarySerializer
 
 
+@extend_schema_view(
+    get=extend_schema(
+        summary="Course를 조회하는 API",
+        description="특정 Course를 조회합니다. 누구나 조회할 수 있습니다.",
+        responses={200: CourseDetailSerializer},
+    ),
+    put=extend_schema(
+        summary="Course를 수정하는 API",
+        description="특정 Course를 수정합니다. staff만 수정할 수 있습니다.",
+        request=CourseDetailSerializer,
+        responses={200: CourseDetailSerializer},
+    ),
+    patch=extend_schema(
+        summary="Course를 부분 수정하는 API",
+        description="특정 Course를 부분 수정합니다. staff만 수정할 수 있습니다.",
+        request=CourseDetailSerializer,
+        responses={200: CourseDetailSerializer},
+    ),
+    delete=extend_schema(
+        summary="Course를 삭제하는 API",
+        description="특정 Course를 삭제합니다. staff만 삭제할 수 있습니다.",
+        responses={204: None},
+    ),
+)
 class CourseDetailRetrieveUpdateDestroyView(
     CourseMixin, generics.RetrieveUpdateDestroyAPIView
 ):
@@ -57,6 +82,19 @@ class CourseDetailRetrieveUpdateDestroyView(
         )
 
 
+@extend_schema_view(
+    get=extend_schema(
+        summary="Course 목록을 조회하는 API",
+        description="Course 목록을 조회합니다. 누구나 조회할 수 있습니다.",
+        responses={200: CourseSummarySerializer},
+    ),
+    post=extend_schema(
+        summary="Course를 생성하는 API",
+        description="Course를 생성합니다. staff만 생성할 수 있습니다.",
+        request=CourseDetailSerializer,
+        responses={201: CourseDetailSerializer},
+    ),
+)
 class CourseListCreateView(CourseMixin, generics.ListCreateAPIView):
     """
     course 목록을 조회하거나 새로운 course를 생성합니다.

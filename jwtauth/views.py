@@ -83,7 +83,7 @@ class LogoutView(GenericAPIView):
 User = get_user_model()
 
 
-class RefreshTokenView(APIView):
+class RefreshTokenView(GenericAPIView):
     """
     사용자가 리프레시 토큰을 제공하면 새로운 액세스, 리프레시 토큰을 반환합니다.
     사용된 리프레시 토큰은 블랙리스트에 추가됩니다.
@@ -102,7 +102,13 @@ class RefreshTokenView(APIView):
                 payload = jwt.decode(
                     refresh_token, settings.SECRET_KEY, algorithms=["HS256"]
                 )
-                user = CustomUser.objects.get(id=payload["user_id"])
+                user = User.objects.get(id=payload["user_id"])
+
+                if not user.is_active:
+                    return Response(
+                        {"error": "비활성화된 유저입니다."},
+                        status=status.HTTP_401_UNAUTHORIZED,
+                    )
 
                 access_token = generate_access_token(user)
                 new_refresh_token = generate_refresh_token(user)

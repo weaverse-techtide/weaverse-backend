@@ -1,13 +1,17 @@
 from django.db import models
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
+from django.conf import settings
 
 
 class BlacklistedToken(models.Model):
+    """
+    해당 모델은 블랙리스트에 추가된 토큰을 저장합니다.
+    """
+
     token = models.CharField(max_length=500, unique=True)
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="blacklisted_tokens"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="blacklisted_tokens",
     )
     blacklisted_at = models.DateTimeField(auto_now_add=True)
     token_type = models.CharField(

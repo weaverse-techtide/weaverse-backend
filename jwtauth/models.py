@@ -22,6 +22,10 @@ class BlacklistedToken(models.Model):
         return f"{self.token_type.capitalize()} token {self.token[:20]}... blacklisted at {self.blacklisted_at}"
 
     class Meta:
+        """
+        블랙리스트 토큰을 검색하기 쉽게 인덱스를 추가합니다.
+        """
+
         indexes = [
             models.Index(fields=["token"]),
             models.Index(fields=["user", "token_type"]),

@@ -4,9 +4,10 @@ on:
   pull_request:
     branches:
       - dev
+      - main
 
 jobs:
-  deploy:
+  ci:
     runs-on: ubuntu-latest
 
     services:

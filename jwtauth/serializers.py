@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import BlacklistedToken
+from django.contrib.auth import get_user_model
 
 
 class LoginSerializer(serializers.ModelSerializer):
@@ -10,6 +11,14 @@ class LoginSerializer(serializers.ModelSerializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
 
+    class Meta:
+        """
+        이 시리얼라이저는 User 모델을 사용합니다.
+        """
+
+        model = get_user_model()
+        fields = ["email", "password"]
+
 
 class LogoutSerializer(serializers.ModelSerializer):
     """
@@ -17,6 +26,14 @@ class LogoutSerializer(serializers.ModelSerializer):
     """
 
     refresh_token = serializers.CharField()
+
+    class Meta:
+        """
+        이 시리얼라이저는 BlacklistedToken 모델을 사용합니다.
+        """
+
+        model = BlacklistedToken
+        fields = ["refresh_token"]
 
 
 class RefreshTokenSerializer(serializers.ModelSerializer):
@@ -30,3 +47,11 @@ class RefreshTokenSerializer(serializers.ModelSerializer):
         if BlacklistedToken.objects.filter(token=value).exists():
             raise serializers.ValidationError("유효하지 않은 리프레시 토큰입니다.")
         return value
+
+    class Meta:
+        """
+        이 시리얼라이저는 BlacklistedToken 모델을 사용합니다.
+        """
+
+        model = BlacklistedToken
+        fields = ["refresh_token"]

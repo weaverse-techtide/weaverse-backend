@@ -4,7 +4,8 @@ from django.conf import settings
 
 class BlacklistedToken(models.Model):
     """
-    해당 모델은 블랙리스트에 추가된 토큰을 저장합니다.
+    client가 로그아웃을 요청하거나 토큰이 만료되었을 때 토큰을 블랙리스트에 추가합니다.
+    class Meta에 인덱스를 추가하여 검색을 빠르게 합니다.
     """
 
     token = models.CharField(max_length=500, unique=True)

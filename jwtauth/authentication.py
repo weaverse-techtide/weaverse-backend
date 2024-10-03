@@ -4,7 +4,6 @@ from django.contrib.auth import get_user_model
 import jwt
 from django.conf import settings
 
-# from .models import BlacklistedToken 상의 필요
 
 User = get_user_model()
 
@@ -27,12 +26,7 @@ class JWTAuthentication(BaseAuthentication):
             )
 
             user_id = payload.get("user_id")
-            if user_id is None:
-                raise AuthenticationFailed("유효하지 않은 페이로드입니다!")
-
-            user = User.objects.filter(id=user_id).first()
-            if user is None:
-                raise AuthenticationFailed("사용자를 찾을 수 없습니다!")
+            user = User.objects.get(id=user_id)
 
             return (user, None)
 

@@ -114,7 +114,12 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = os.getenv("STATIC_ROOT", BASE_DIR / "static")
-STATICFILES_DIRS = os.getenv("STATICFILES_DIRS", [BASE_DIR / "staticfiles"])
+
+STATICFILES_DIRS = os.getenv("STATICFILES_DIRS")
+if STATICFILES_DIRS:
+    STATICFILES_DIRS = [path.strip() for path in STATICFILES_DIRS.split(",")]
+else:
+    STATICFILES_DIRS = [BASE_DIR / "staticfiles"]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://www.weaverse.site",

@@ -186,6 +186,7 @@ class TutorStudentView(generics.ListAPIView):
     serializer_class = CustomUserSerializer
     permission_classes = [IsAuthenticated & (IsTutor | IsSuperUser)]
     authentication_classes = [JWTAuthentication]
+    pagination_class = StandardResultsSetPagination
     filter_backends = [OrderingFilter]
 
     ordering_fields = ["email", "first_name", "last_name", "created_at"]

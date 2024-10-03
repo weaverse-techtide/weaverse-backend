@@ -1,16 +1,38 @@
 from django.urls import path
 
-from . import views
+from .views import (
+    PasswordResetView,
+    StudentListCreateView,
+    StudentRetrieveUpdateDestroyView,
+    TutorListCreateView,
+    TutorRetrieveUpdateDestroyView,
+    TutorStudentView,
+)
 
 app_name = "accounts"
 
 urlpatterns = [
-    path("students/", views.student_list_create, name="student-list-create"),
+    path("password/reset/", PasswordResetView.as_view(), name="password-reset"),
+    path("students/", StudentListCreateView.as_view(), name="student-list-create"),
     path(
         "students/<int:pk>/",
-        views.student_retrieve_update_delete,
+        StudentRetrieveUpdateDestroyView.as_view(),
         name="student-detail",
     ),
-    path("students/counts/", views.student_count, name="student-count"),
-    path("tutors/", views.tutor_list_create, name="tutor-list-create"),
+    path("tutors/", TutorListCreateView.as_view(), name="tutor-list-create"),
+    path(
+        "tutors/<int:pk>/",
+        TutorRetrieveUpdateDestroyView.as_view(),
+        name="tutor-detail",
+    ),
+    path(
+        "tutors/<int:pk>/students/",
+        TutorStudentView.as_view(),
+        name="tutor-student",
+    ),
+    path(
+        "tutors/<int:pk>/students/count",
+        TutorStudentView.as_view(),
+        name="tutor-students",
+    ),
 ]

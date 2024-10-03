@@ -30,9 +30,4 @@ urlpatterns = [
         TutorStudentView.as_view(),
         name="tutor-student",
     ),
-    path(
-        "tutors/<int:pk>/students/count",
-        TutorStudentView.as_view(),
-        name="tutor-students",
-    ),
 ]

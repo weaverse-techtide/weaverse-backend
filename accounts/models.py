@@ -2,8 +2,8 @@ from django.apps import apps
 from django.contrib import auth
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import AbstractUser, UserManager
+from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 
 
 class CustomUserManager(UserManager):
@@ -19,11 +19,8 @@ class CustomUserManager(UserManager):
         if not email:
             raise ValueError("이메일 입력은 필수입니다.")
         email = self.normalize_email(email)
-        GlobalUserModel = apps.get_model(
-            self.model._meta.app_label, self.model._meta.object_name
-        )
         user = self.model(email=email, **extra_fields)
-        user.password = make_password(password)
+        user.set_password(password)
         user.save(using=self._db)
         return user
 
@@ -51,39 +48,6 @@ class CustomUserManager(UserManager):
         extra_fields.setdefault("is_superuser", False)
         return self._create_user(email, password, **extra_fields)
 
-    def with_perm(
-        self, perm, is_active=True, include_superusers=True, backend=None, obj=None
-    ):
-        """
-        특정한 권한을 가진 사용자를 쉽게 필터링합니다.
-        - 먼저, 설정된 인증 백엔드 확인하고 유효성 검사, 로딩합니다.
-        - 로딩된 백엔드에 with_perm이 있다면 그것을 호출하고 없다면 빈 쿼리셋을 반환합니다.
-
-        """
-        if backend is None:
-            backends = auth._get_backends(return_tuples=True)
-            if len(backends) == 1:
-                backend, _ = backends[0]
-            else:
-                raise ValueError(
-                    "You have multiple authentication backends configured and "
-                    "therefore must provide the `backend` argument."
-                )
-        elif not isinstance(backend, str):
-            raise TypeError(
-                "backend must be a dotted import path string (got %r)." % backend
-            )
-        else:
-            backend = auth.load_backend(backend)
-        if hasattr(backend, "with_perm"):
-            return backend.with_perm(
-                perm,  # 권한 인스턴스 (형식: "<앱 레이블>.<권한 코드명>")
-                is_active=is_active,
-                include_superusers=include_superusers,
-                obj=obj,
-            )
-        return self.none()
-
 
 class CustomUser(AbstractUser):
     """
@@ -93,7 +57,25 @@ class CustomUser(AbstractUser):
     """
 
     username = None
-    email = models.EmailField(_("email address"), unique=True)  # 필드를 기본키로 지정
+    email = models.EmailField(
+        unique=True, verbose_name="이메일"
+    )  # 필드를 기본키로 지정
+
+    nickname = models.CharField(max_length=20, verbose_name="닉네임")
+    phone_number = models.CharField(max_length=20, verbose_name="연락처")
+    introduction = models.TextField(max_length=20, verbose_name="자기소개")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="생성 일자")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="갱신 일자")
+
+    students = models.ManyToManyField(  # 특정 사용자(튜터)가 갖는 여러 명의 학생들
+        "self",
+        symmetrical=False,  # 비대칭 관계(학생과 튜터는 독립적인 관계)
+        related_name="tutors",  # 특정 사용자(학생)이 갖는 여러 명의 튜터들
+        related_query_name="tutor",  # 쿼리셋의 필터링
+        limit_choices_to={"is_staff": False},  # 학생만 선택할 수 있도록 제한
+        blank=True,  # 비어 있을 수 있도록 허용
+        verbose_name="수강 학생들",  # 사용자에게 보일 이름
+    )
 
     USERNAME_FIELD = "email"  # 인증시 사용할 필드 지정
     REQUIRED_FIELDS = []
@@ -102,3 +84,8 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def clean(self):
+        super().clean()
+        if not self.email:
+            raise ValidationError("이메일은 필수입니다.")

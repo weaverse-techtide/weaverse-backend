@@ -2,50 +2,60 @@ from rest_framework import permissions
 
 
 class BaseAuthPermission(permissions.IsAuthenticated):
+    """
+    권한 값으로 True/False를 반환합니다.
+    - 사용자 객체 생성 및 인증 여부를 확인하고 인증자에게만 허용합니다.
+    """
+
     message = "이 작업을 수행할 권한이 없습니다."
 
 
 class IsAuthenticatedOrCreateOnly(BaseAuthPermission):
     """
-    GET 요청에 대해서는 인증을 요구하고, POST 요청은 누구나 권한을 허용합니다.
+    권한 값으로 True/False를 반환합니다.
+    - GET 요청을 인증된 사용자에게 허용합니다.
+    - POST 요청을 누구에게나 허용합니다.
     """
 
     message = "이 작업을 수행하려면 로그인이 필요합니다."
 
     def has_permission(self, request, view):
         if request.method == "GET":
-            return self.is_authenticated(request)
+            return super().has_permission(request, view)
         elif request.method == "POST":
             return True
         return False
 
 
-class IsAuthenticatedAndTutor(BaseAuthPermission):
+class IsTutor(BaseAuthPermission):
     """
-    인증된, 그리고 유저 중 관리자(tutor) 권한을 가진 사용자에게만 접근을 허용합니다.
-    """
-
-    def has_permission(self, request, view):
-        return self.is_authenticated(request) and request.user.is_staff
-
-
-class IsAuthenticatedAndSuperUser(BaseAuthPermission):
-    """
-    인증된, 그리고 유저 중 수퍼유저(superuser) 권한을 가진 사용자에게만 접근을 허용합니다.
+    권한 값으로 True/False를 반환합니다.
+    - 요청 유형과 관계없이 강사(Tutor)이면 권한을 허용합니다.
     """
 
     def has_permission(self, request, view):
-        return self.is_authenticated(request) and request.user.is_superuser
+        return super().has_permission(request, view) and request.user.is_staff
+
+
+class IsSuperUser(BaseAuthPermission):
+    """
+    권한 값으로 True/False를 반환합니다.
+    - 요청 유형과 관계없이 관리자(superuser)이면 권한을 허용합니다.
+    """
+
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and request.user.is_superuser
 
 
 class IsTutorOrSuperUserOrSuperUserCreateOnly(BaseAuthPermission):
     """
-    GET 요청에 대해서는 인증된, 그리고 유저 중 강사(tutor)와 수퍼 유저(superuser)를,
-    POST 요청에 대해서는 인증된, 그리고 유저 중 수퍼 유저에게 권한을 허용합니다.
+    권한 값으로 True/False를 반환합니다.
+    - GET 요청을 강사(tutor) 또는 관리자(superuser)에게 허용합니다.
+    - POST 요청을 관리자(superuser)에게만 허용합니다.
     """
 
     def has_permission(self, request, view):
-        if not self.is_authenticated(request):
+        if not super().has_permission(request, view):
             return False
 
         if request.method == "GET":

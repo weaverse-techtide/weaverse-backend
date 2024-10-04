@@ -3,6 +3,8 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import generics
 from rest_framework.response import Response
 
+from jwtauth.authentication import JWTAuthentication
+
 from .mixins import CourseMixin
 from .models import Course, Curriculum
 from .permissions import IsStaffOrReadOnly
@@ -52,6 +54,7 @@ class CourseDetailRetrieveUpdateDestroyView(
     )
     serializer_class = CourseDetailSerializer
     permission_classes = [IsStaffOrReadOnly]
+    authentication_classes = [JWTAuthentication]
 
     def get_permissions(self):
         """

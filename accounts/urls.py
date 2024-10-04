@@ -6,7 +6,6 @@ from .views import (
     StudentRetrieveUpdateDestroyView,
     TutorListView,
     TutorRetrieveUpdateDestroyView,
-    TutorStudentView,
     UserRegisterationView,
 )
 
@@ -27,9 +26,4 @@ urlpatterns = [
         TutorRetrieveUpdateDestroyView.as_view(),
         name="tutor-detail",
     ),
-    # path(
-    #     "tutors/<int:pk>/students/",
-    #     TutorStudentView.as_view(),
-    #     name="tutor-student",
-    # ),
 ]

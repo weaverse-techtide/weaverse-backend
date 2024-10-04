@@ -372,13 +372,12 @@ class TestCourseList:
 @pytest.mark.django_db
 class TestCurriculumList:
 
-    def test_curriculum_생성_요청(self, api_client, setup_course_data):
+    def test_curriculum_생성_요청(
+        self, api_client, setup_course_data, staff_user_token
+    ):
         # Given
         url = reverse("courses:curriculum-list")
-        api_client.login(
-            username=conftest.TEST_STAFF_USER_EMAIL,
-            password=conftest.TEST_STAFF_USER_PASSWORD,
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {staff_user_token}")
         data = {
             "name": "Test Curriculum",
             "description": "Test Description",
@@ -393,13 +392,11 @@ class TestCurriculumList:
         assert response.status_code == status.HTTP_201_CREATED
 
     def test_curriculum_생성_요청_실패_일반유저인_경우(
-        self, api_client, setup_course_data
+        self, api_client, setup_course_data, user_token
     ):
         # Given
         url = reverse("courses:curriculum-list")
-        api_client.login(
-            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
         data = {
             "name": "Test Curriculum",
             "description": "Test Description",
@@ -432,7 +429,7 @@ class TestCurriculumList:
         response = api_client.post(url, data, format="json")
 
         # Then
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.data == {
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
@@ -488,7 +485,7 @@ class TestCurriculumDetail:
         assert response.data["updated_at"] is not None
         assert len(response.data["courses"]) == 1
 
-    def test_curriculum_수정(self, api_client, setup_course_data):
+    def test_curriculum_수정(self, api_client, setup_course_data, staff_user_token):
         # Given
         curriculum = Curriculum.objects.create(
             name="Test Curriculum",
@@ -496,10 +493,7 @@ class TestCurriculumDetail:
             price=1000,
         )
         url = reverse("courses:curriculum-detail", args=[curriculum.id])
-        api_client.login(
-            username=conftest.TEST_STAFF_USER_EMAIL,
-            password=conftest.TEST_STAFF_USER_PASSWORD,
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {staff_user_token}")
         data = {
             "name": "Updated Test Curriculum",
             "description": "Updated Test Description",
@@ -516,7 +510,9 @@ class TestCurriculumDetail:
         assert response.data["description"] == "Updated Test Description"
         assert response.data["price"] == 2000
 
-    def test_curriculum_수정_실패_일반유저인_경우(self, api_client, setup_course_data):
+    def test_curriculum_수정_실패_일반유저인_경우(
+        self, api_client, setup_course_data, user_token
+    ):
         # Given
         curriculum = Curriculum.objects.create(
             name="Test Curriculum",
@@ -524,9 +520,7 @@ class TestCurriculumDetail:
             price=1000,
         )
         url = reverse("courses:curriculum-detail", args=[curriculum.id])
-        api_client.login(
-            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
         data = {
             "name": "Updated Test Curriculum",
             "description": "Updated Test Description",
@@ -564,12 +558,12 @@ class TestCurriculumDetail:
         response = api_client.put(url, data, format="json")
 
         # Then
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.data == {
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
 
-    def test_curriculum_삭제(self, api_client):
+    def test_curriculum_삭제(self, api_client, staff_user_token):
         # Given
         curriculum = Curriculum.objects.create(
             name="Test Curriculum",
@@ -577,10 +571,7 @@ class TestCurriculumDetail:
             price=1000,
         )
         url = reverse("courses:curriculum-detail", args=[curriculum.id])
-        api_client.login(
-            username=conftest.TEST_STAFF_USER_EMAIL,
-            password=conftest.TEST_STAFF_USER_PASSWORD,
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {staff_user_token}")
 
         # When
         response = api_client.delete(url)
@@ -589,7 +580,7 @@ class TestCurriculumDetail:
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert Curriculum.objects.count() == 0
 
-    def test_curriculum_삭제_실패_일반유저인_경우(self, api_client):
+    def test_curriculum_삭제_실패_일반유저인_경우(self, api_client, user_token):
         # Given
         curriculum = Curriculum.objects.create(
             name="Test Curriculum",
@@ -597,9 +588,7 @@ class TestCurriculumDetail:
             price=1000,
         )
         url = reverse("courses:curriculum-detail", args=[curriculum.id])
-        api_client.login(
-            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
 
         # When
         response = api_client.delete(url)
@@ -623,18 +612,17 @@ class TestCurriculumDetail:
         response = api_client.delete(url)
 
         # Then
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.data == {
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
 
-    def test_curriculum_수정_실패_존재하지않는_curriculum인_경우(self, api_client):
+    def test_curriculum_수정_실패_존재하지않는_curriculum인_경우(
+        self, api_client, staff_user_token
+    ):
         # Given
         url = reverse("courses:curriculum-detail", args=[1])
-        api_client.login(
-            username=conftest.TEST_STAFF_USER_EMAIL,
-            password=conftest.TEST_STAFF_USER_PASSWORD,
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {staff_user_token}")
         data = {
             "name": "Updated Test Curriculum",
             "description": "Updated Test Description",

@@ -2,6 +2,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
+from rest_framework.parsers import JSONParser
 from django.contrib.auth import authenticate, get_user_model
 from django.conf import settings
 from .serializers import LoginSerializer, LogoutSerializer, RefreshTokenSerializer
@@ -21,6 +22,7 @@ class LoginView(GenericAPIView):
 
     permission_classes = [AllowAny]
     serializer_class = LoginSerializer
+    parser_classes = [JSONParser]
 
     def post(self, request):
 
@@ -55,6 +57,7 @@ class LogoutView(GenericAPIView):
 
     permission_classes = [IsAuthenticated]
     serializer_class = LogoutSerializer
+    parser_classes = [JSONParser]
 
     def post(self, request):
 
@@ -88,6 +91,7 @@ class RefreshTokenView(GenericAPIView):
 
     permission_classes = [AllowAny]
     serializer_class = RefreshTokenSerializer
+    parser_classes = [JSONParser]
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)

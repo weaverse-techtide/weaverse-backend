@@ -44,14 +44,11 @@ class TestCourseDetail:
             is not None
         )
 
-    def test_course_수정(self, api_client, setup_course_data):
+    def test_course_수정(self, api_client, setup_course_data, staff_user_token):
         # Given
         course = setup_course_data["course"]
         url = reverse("courses:course-detail", args=[course.id])
-        api_client.login(
-            username=conftest.TEST_STAFF_USER_EMAIL,
-            password=conftest.TEST_STAFF_USER_PASSWORD,
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {staff_user_token}")
         data = {
             "title": "Updated Test Course",
             "short_description": "Updated Test Course",
@@ -156,12 +153,12 @@ class TestCourseDetail:
         response = api_client.put(url, data, format="json")
 
         # Then
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.data == {
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
 
-    def test_course_수정_실패_일반유저인_경우(self, api_client):
+    def test_course_수정_실패_일반유저인_경우(self, api_client, user_token):
         # Given
         course = Course.objects.create(
             title="Test Course",
@@ -172,9 +169,7 @@ class TestCourseDetail:
             price=10000,
         )
         url = reverse("courses:course-detail", args=[course.id])
-        api_client.login(
-            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
         data = {
             "title": "Updated Test Course",
             "short_description": "Updated Test Course",
@@ -193,7 +188,7 @@ class TestCourseDetail:
             "detail": "이 작업을 수행할 권한(permission)이 없습니다."
         }
 
-    def test_course_삭제(self, api_client):
+    def test_course_삭제(self, api_client, staff_user_token):
         # Given
         course = Course.objects.create(
             title="Test Course",
@@ -204,10 +199,7 @@ class TestCourseDetail:
             price=10000,
         )
         url = reverse("courses:course-detail", args=[course.id])
-        api_client.login(
-            username=conftest.TEST_STAFF_USER_EMAIL,
-            password=conftest.TEST_STAFF_USER_PASSWORD,
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {staff_user_token}")
 
         # When
         response = api_client.delete(url)
@@ -232,12 +224,12 @@ class TestCourseDetail:
         response = api_client.delete(url)
 
         # Then
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.data == {
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
 
-    def test_course_삭제_실패_일반유저인_경우(self, api_client, create_user):
+    def test_course_삭제_실패_일반유저인_경우(self, api_client, user_token):
         # Given
         course = Course.objects.create(
             title="Test Course",
@@ -248,9 +240,7 @@ class TestCourseDetail:
             price=10000,
         )
         url = reverse("courses:course-detail", args=[course.id])
-        api_client.login(
-            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
 
         # When
         response = api_client.delete(url)

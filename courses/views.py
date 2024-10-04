@@ -111,6 +111,7 @@ class CourseListCreateView(CourseMixin, generics.ListCreateAPIView):
 
     queryset = Course.objects.all()
     permission_classes = [IsStaffOrReadOnly]
+    authentication_classes = [JWTAuthentication]
 
     def get_serializer_class(self):
         """

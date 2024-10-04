@@ -3,16 +3,19 @@ from django.db.utils import DatabaseError
 from django.shortcuts import get_object_or_404
 from jwtauth.authentication import JWTAuthentication
 from rest_framework import filters, generics, mixins, status
-from rest_framework.exceptions import (NotFound, PermissionDenied,
-                                       ValidationError)
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from .models import CustomUser
 from .permissions import IsAuthenticatedAndActive, IsSuperUser, IsTutor
-from .serializers import (CustomUserDetailSerializer, PasswordResetSerializer,
-                          StudentListSerializer, TutorListSerializer,
-                          UserRegistrationSerializer)
+from .serializers import (
+    CustomUserDetailSerializer,
+    PasswordResetSerializer,
+    StudentListSerializer,
+    TutorListSerializer,
+    UserRegistrationSerializer,
+)
 
 
 class StandardResultsSetPagination(PageNumberPagination):
@@ -290,7 +293,10 @@ class TutorRetrieveUpdateDestroyView(
         except PermissionDenied as e:
             return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
         except Exception as e:
-            return Response({"error": f"조회 중 오류가 발생했습니다: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": f"조회 중 오류가 발생했습니다: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def put(self, request, *args, **kwargs):
         try:
@@ -300,7 +306,10 @@ class TutorRetrieveUpdateDestroyView(
         except ValidationError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({"error": f"수정 중 오류가 발생했습니다: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": f"수정 중 오류가 발생했습니다: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @transaction.atomic
     def delete(self, request, *args, **kwargs):
@@ -308,52 +317,19 @@ class TutorRetrieveUpdateDestroyView(
             tutor = self.get_object()
             tutor.is_active = False
             tutor.save()
-            return Response({"message": "강사 계정이 비활성화되었습니다."}, status=status.HTTP_200_OK)
+            return Response(
+                {"message": "강사 계정이 비활성화되었습니다."},
+                status=status.HTTP_200_OK,
+            )
         except PermissionDenied as e:
             return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
         except Exception as e:
-            return Response({"error": f"삭제 중 오류가 발생했습니다: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": f"삭제 중 오류가 발생했습니다: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def check_object_permissions(self, request, obj):
         if not request.user.is_superuser and request.user.pk != obj.pk:
             raise PermissionDenied("해당 강사의 정보에 접근할 권한이 없습니다.")
         super().check_object_permissions(request, obj)
-
-
-# class TutorStudentView(generics.ListAPIView):
-#     """
-#     특정 튜터의 학생 목록을 조회합니다.
-#     GET: 튜터의 학생 목록 조회
-#     """
-
-#     serializer_class = CustomUserSerializer
-#     permission_classes = [IsAuthenticatedAndActive & (IsTutor | IsSuperUser)]
-#     authentication_classes = [JWTAuthentication]
-#     pagination_class = StandardResultsSetPagination
-#     filter_backends = [filters.OrderingFilter]
-
-#     ordering_fields = ["email", "first_name", "last_name", "created_at"]
-#     ordering = ["created_at"]  # 기본 정렬 순서
-
-#     def get_queryset(self):
-#         tutor_id = self.kwargs.get("tutor_id")
-#         try:
-#             tutor = CustomUser.objects.get(id=tutor_id, is_staff=True)
-#         except CustomUser.DoesNotExist:
-#             raise NotFound("해당 튜터를 찾을 수 없습니다.")
-
-#         if self.request.user.id != tutor_id and not self.request.user.is_superuser:
-#             raise PermissionDenied("이 정보에 접근할 권한이 없습니다.")
-
-#         return tutor.students.filter(is_active=True)
-
-#     def list(self, request, *args, **kwargs):
-#         queryset = self.filter_queryset(self.get_queryset())
-#         serializer = self.get_serializer(queryset, many=True)
-#         return Response(
-#             {
-#                 "tutor_id": self.kwargs.get("tutor_id"),
-#                 "student_count": queryset.count(),
-#                 "students": serializer.data,
-#             }
-#         )

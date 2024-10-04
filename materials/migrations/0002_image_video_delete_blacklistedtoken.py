@@ -7,70 +7,34 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("courses", "0005_alter_assignment_options_alter_course_options_and_more"),
-        ("materials", "0001_initial"),
+        ('courses', '0005_alter_assignment_options_alter_course_options_and_more'),
+        ('materials', '0001_initial'),
     ]
 
     operations = [
         migrations.CreateModel(
-            name="Image",
+            name='Image',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("title", models.CharField(max_length=255, verbose_name="이미지 제목")),
-                (
-                    "file",
-                    models.ImageField(upload_to="images/", verbose_name="이미지 파일"),
-                ),
-                ("created_at", models.DateTimeField(auto_now_add=True)),
-                ("updated_at", models.DateTimeField(auto_now=True)),
-                (
-                    "course",
-                    models.OneToOneField(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="images",
-                        to="courses.course",
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('title', models.CharField(max_length=255, verbose_name='이미지 제목')),
+                ('file', models.ImageField(upload_to='images/', verbose_name='이미지 파일')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('course', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='images', to='courses.course')),
             ],
         ),
         migrations.CreateModel(
-            name="Video",
+            name='Video',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("title", models.CharField(max_length=255, verbose_name="비디오 제목")),
-                (
-                    "file",
-                    models.FileField(upload_to="videos/", verbose_name="비디오 파일"),
-                ),
-                ("created_at", models.DateTimeField(auto_now_add=True)),
-                ("updated_at", models.DateTimeField(auto_now=True)),
-                (
-                    "topic",
-                    models.OneToOneField(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="videos",
-                        to="courses.topic",
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('title', models.CharField(max_length=255, verbose_name='비디오 제목')),
+                ('file', models.FileField(upload_to='videos/', verbose_name='비디오 파일')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('topic', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='videos', to='courses.topic')),
             ],
         ),
         migrations.DeleteModel(
-            name="BlacklistedToken",
+            name='BlacklistedToken',
         ),
     ]

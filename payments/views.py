@@ -1,7 +1,9 @@
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, extend_schema_view
 
 from .models import Cart, CartItem, Order, OrderItem
 from .serializers import (
@@ -12,11 +14,21 @@ from .serializers import (
 )
 
 
+@extend_schema_view(
+    get=extend_schema(
+        summary="사용자의 장바구니를 조회하는 API",
+        description="사용자의 장바구니를 조회합니다. 장바구니가 비어있으면 에러를 반환합니다.",
+        responses={200: CartSerializer},
+    ),
+    post=extend_schema(
+        summary="장바구니에 있는 상품을 주문으로 전환하는 API",
+        description="장바구니에 있는 상품을 주문으로 전환합니다. 장바구니가 비어있으면 에러를 반환합니다.",
+        responses={200: OrderSerializer},
+    ),
+)
 class CartItemListCreateView(generics.GenericAPIView):
     """
     사용자의 장바구니를 조회하고, 상품을 추가합니다.
-    - [GET]: 사용자의 장바구니를 조회합니다.
-    - [POST]: 사용자의 장바구니에 상품을 추가합니다.
     """
 
     queryset = CartItem.objects.all()
@@ -70,9 +82,16 @@ class CartItemListCreateView(generics.GenericAPIView):
         )
 
 
+@extend_schema_view(
+    delete=extend_schema(
+        summary="장바구니에서 상품을 삭제하는 API",
+        description="장바구니에서 특정 상품을 삭제합니다.",
+        responses={204: "상품이 장바구니에서 삭제되었습니다."},
+    ),
+)
 class CartItemDestroyView(generics.GenericAPIView):
     """
-    [DELETE]: 사용자의 장바구니에서 특정 상품을 삭제합니다.
+    사용자의 장바구니에서 특정 상품을 삭제합니다.
     """
 
     queryset = CartItem.objects.all()
@@ -83,11 +102,7 @@ class CartItemDestroyView(generics.GenericAPIView):
         return self.queryset.filter(cart__user=self.request.user)
 
     def delete(self, request, pk):
-        cart_item = self.get_queryset().filter(pk=pk).first()
-        if not cart_item:
-            return Response(
-                {"detail": "상품이 없습니다."}, status=status.HTTP_404_NOT_FOUND
-            )
+        cart_item = get_object_or_404(self.get_queryset(), pk=pk)
         cart_item.delete()
         return Response(
             {"detail": "상품이 장바구니에서 삭제되었습니다."},
@@ -95,11 +110,21 @@ class CartItemDestroyView(generics.GenericAPIView):
         )
 
 
+@extend_schema_view(
+    get=extend_schema(
+        summary="사용자의 주문을 조회하는 API",
+        description="사용자의 주문을 조회합니다. 주문이 없으면 에러를 반환합니다.",
+        responses={200: OrderSerializer},
+    ),
+    post=extend_schema(
+        summary="장바구니에 있는 상품을 주문으로 전환하는 API",
+        description="장바구니에 있는 상품을 주문으로 전환합니다. 장바구니가 비어있으면 에러를 반환합니다.",
+        responses={200: OrderSerializer},
+    ),
+)
 class OrderItemListCreateView(generics.GenericAPIView):
     """
     사용자의 주문을 조회하고, 상품을 추가합니다.
-    - [GET]: 사용자의 주문 항목을 조회합니다.
-    - [POST]: 사용자의 주문에 상품을 추가합니다.
     """
 
     queryset = OrderItem.objects.all()
@@ -153,9 +178,16 @@ class OrderItemListCreateView(generics.GenericAPIView):
         )
 
 
+@extend_schema_view(
+    delete=extend_schema(
+        summary="주문에서 상품을 삭제하는 API",
+        description="주문에서 특정 상품을 삭제합니다.",
+        responses={204: "상품이 주문에서 삭제되었습니다."},
+    ),
+)
 class OrderItemDestroyView(generics.GenericAPIView):
     """
-    [DELETE]: 사용자의 주문에서 특정 상품을 삭제합니다.
+    사용자의 주문에서 특정 상품을 삭제합니다.
     """
 
     queryset = OrderItem.objects.all()
@@ -166,11 +198,7 @@ class OrderItemDestroyView(generics.GenericAPIView):
         return self.queryset.filter(order__user=self.request.user)
 
     def delete(self, request, pk):
-        order_item = self.get_queryset().filter(pk=pk).first()
-        if not order_item:
-            return Response(
-                {"detail": "상품이 없습니다."}, status=status.HTTP_404_NOT_FOUND
-            )
+        order_item = get_object_or_404(self.get_queryset(), pk=pk)
         order_item.delete()
         return Response(
             {"detail": "상품이 주문에서 삭제되었습니다."},
@@ -178,9 +206,16 @@ class OrderItemDestroyView(generics.GenericAPIView):
         )
 
 
+@extend_schema_view(
+    post=extend_schema(
+        summary="장바구니에 있는 상품을 주문으로 전환하는 API",
+        description="사용자의 장바구니에 있는 모든 상품을 주문으로 전환합니다.",
+        responses={200: OrderSerializer},
+    ),
+)
 class CartToOrderConversionView(generics.GenericAPIView):
     """
-    [POST]: 사용자의 장바구니에 있는 모든 상품을 주문으로 전환합니다.
+    사용자의 장바구니에 있는 모든 상품을 주문으로 전환합니다.
     """
 
     serializer_class = OrderSerializer

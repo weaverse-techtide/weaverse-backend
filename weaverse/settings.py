@@ -62,12 +62,11 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
         "rest_framework.renderers.BrowsableAPIRenderer",  # 이 옵션이 있어야 브라우저에서 API를 시각적으로 볼 수 있음
     ),
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework.authentication.TokenAuthentication",
-        "jwtauth.authentication.JWTAuthentication",
-    ),
+    "DEFAULT_AUTHENTICATION_CLASSES": ("jwtauth.authentication.JWTAuthentication",),
     "DEFAULT_PARSER_CLASSES": ("rest_framework.parsers.JSONParser",),
-    "DEFAULT_SCHEMA_CLASS": ("drf_spectacular.openapi.AutoSchema",),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
 }
 
 WSGI_APPLICATION = "weaverse.wsgi.application"
@@ -81,12 +80,6 @@ DATABASES = {
         "HOST": os.getenv("DATABASE_HOST", ""),
         "PORT": os.getenv("DATABASE_PORT", ""),
     }
-}
-
-REST_FRAMEWORK = {
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 10,
 }
 
 AUTH_PASSWORD_VALIDATORS = [

@@ -304,13 +304,10 @@ def get_course_data():
 @pytest.mark.django_db
 class TestCourseList:
 
-    def test_course_생성_요청(self, api_client, create_staff_user):
+    def test_course_생성_요청(self, api_client, staff_user_token):
         # Given
         url = reverse("courses:course-list")
-        api_client.login(
-            username=conftest.TEST_STAFF_USER_EMAIL,
-            password=conftest.TEST_STAFF_USER_PASSWORD,
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {staff_user_token}")
         data = get_course_data()
 
         # When
@@ -319,12 +316,10 @@ class TestCourseList:
         # Then
         assert response.status_code == status.HTTP_201_CREATED
 
-    def test_course_생성_요청_실패_일반유저인_경우(self, api_client, create_user):
+    def test_course_생성_요청_실패_일반유저인_경우(self, api_client, user_token):
         # Given
         url = reverse("courses:course-list")
-        api_client.login(
-            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
         data = get_course_data()
 
         # When
@@ -345,7 +340,7 @@ class TestCourseList:
         response = api_client.post(url, data, format="json")
 
         # Then
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.data == {
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }

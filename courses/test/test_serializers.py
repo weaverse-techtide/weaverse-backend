@@ -618,6 +618,7 @@ class TestCurriculumReadSerializer:
         assert serializer.data["price"] == 1000
         assert serializer.data["courses"] is not None
 
+
 @pytest.mark.django_db
 class TestCurriculumSummarySerializer:
 

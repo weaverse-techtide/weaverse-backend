@@ -54,7 +54,13 @@ class CustomUserAdmin(UserAdmin):
                     nickname=form.cleaned_data["nickname"],
                 )
         else:
-            super().save_model(request, obj, form, change)
+            obj.email = form.cleaned_data.get("email", obj.email)
+            obj.nickname = form.cleaned_data.get("nickname", obj.nickname)
+            if "password1" in form.cleaned_data:
+                obj.set_password(form.cleaned_data["password1"])
+            obj.is_staff = form.cleaned_data.get("is_staff", obj.is_staff)
+            obj.is_superuser = form.cleaned_data.get("is_superuser", obj.is_superuser)
+            obj.save()
 
 
 admin.site.register(CustomUser, CustomUserAdmin)

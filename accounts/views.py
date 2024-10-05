@@ -41,11 +41,11 @@ class UserRegisterationView(mixins.CreateModelMixin, generics.GenericAPIView):
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        headers = self.get_success_headers(serializer.data)
 
-        if serializer.is_valide():
+        if serializer.is_valid():
             try:
                 user = self.perform_create(serializer)
+                headers = self.get_success_headers(serializer.data)
                 return Response(
                     {
                         "message": "성공적으로 회원가입 되었습니다.",
@@ -88,29 +88,25 @@ class PasswordResetView(generics.GenericAPIView):
 
     serializer_class = PasswordResetSerializer
     permission_classes = [IsAuthenticatedAndActive]
-    authentication_classes = [JWTAuthentication]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        try:
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(
-                {"detail": "비밀번호가 성공적으로 변경되었습니다."},
-                status=status.HTTP_200_OK,
-            )
-        except ValidationError as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        except Exception as e:
-            return Response(
-                {
-                    "error": "비밀번호 재설정 중 오류가 발생했습니다. 다시 시도해 주세요."
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        if serializer.is_valid():
+            try:
+                serializer.save()
+                return Response(
+                    {"detail": "비밀번호가 성공적으로 변경되었습니다."},
+                    status=status.HTTP_200_OK,
+                )
+            except Exception as e:
+                return Response(
+                    {
+                        "error": "비밀번호 재설정 중 오류가 발생했습니다. 다시 시도해 주세요."
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class StudentListView(mixins.ListModelMixin, generics.GenericAPIView):
@@ -124,7 +120,6 @@ class StudentListView(mixins.ListModelMixin, generics.GenericAPIView):
     serializer_class = StudentListSerializer
     permission_classes = [IsAuthenticatedAndActive]
     pagination_class = StandardResultsSetPagination
-    authentication_classes = [JWTAuthentication]
 
     filter_backends = [filters.OrderingFilter]
     ordering_fields = [
@@ -172,7 +167,6 @@ class StudentRetrieveUpdateDestroyView(
     queryset = CustomUser.objects.filter(is_staff=False, is_active=True)
     serializer_class = CustomUserDetailSerializer
     permission_classes = [IsAuthenticatedAndActive]
-    authentication_classes = [JWTAuthentication]
 
     def get_object(self):
         obj = get_object_or_404(self.get_queryset(), pk=self.kwargs["pk"])
@@ -193,8 +187,20 @@ class StudentRetrieveUpdateDestroyView(
             )
 
     def put(self, request, *args, **kwargs):
+        return self._update(request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        return self._update(request, *args, partial=True, **kwargs)
+
+    def _update(self, request, *args, partial=False, **kwargs):
         try:
-            return self.update(request, *args, **kwargs)
+            instance = self.get_object()
+            serializer = self.get_serializer(
+                instance, data=request.data, partial=partial
+            )
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except PermissionDenied as e:
             return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
         except ValidationError as e:
@@ -205,6 +211,15 @@ class StudentRetrieveUpdateDestroyView(
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    def perform_update(self, serializer):
+        serializer.save()
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+        if password:
+            instance.set_password(password)
+        return super().update(instance, validated_data)
+
     @transaction.atomic
     def delete(self, request, *args, **kwargs):
         try:
@@ -212,7 +227,8 @@ class StudentRetrieveUpdateDestroyView(
             user.is_active = False
             user.save()
             return Response(
-                {"message": "계정이 비활성화되었습니다."}, status=status.HTTP_200_OK
+                {"message": "계정이 비활성화되었습니다."},
+                status=status.HTTP_204_NO_CONTENT,
             )
         except PermissionDenied as e:
             return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
@@ -236,7 +252,6 @@ class TutorListView(
     serializer_class = TutorListSerializer
     permission_classes = [IsSuperUser]
     pagination_class = StandardResultsSetPagination
-    authentication_classes = [JWTAuthentication]
 
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ["email", "nickname", "created_at"]
@@ -280,7 +295,6 @@ class TutorRetrieveUpdateDestroyView(
     queryset = CustomUser.objects.filter(is_staff=True, is_active=True)
     serializer_class = CustomUserDetailSerializer
     permission_classes = [IsTutor | IsSuperUser]
-    authentication_classes = [JWTAuthentication]
 
     def get_object(self):
         obj = get_object_or_404(self.get_queryset(), pk=self.kwargs["pk"])
@@ -299,8 +313,20 @@ class TutorRetrieveUpdateDestroyView(
             )
 
     def put(self, request, *args, **kwargs):
+        return self._update(request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        return self._update(request, *args, partial=True, **kwargs)
+
+    def _update(self, request, *args, partial=False, **kwargs):
         try:
-            return self.update(request, *args, **kwargs)
+            instance = self.get_object()
+            serializer = self.get_serializer(
+                instance, data=request.data, partial=partial
+            )
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return Response(serializer.data)
         except PermissionDenied as e:
             return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
         except ValidationError as e:
@@ -319,7 +345,7 @@ class TutorRetrieveUpdateDestroyView(
             tutor.save()
             return Response(
                 {"message": "강사 계정이 비활성화되었습니다."},
-                status=status.HTTP_200_OK,
+                status=status.HTTP_204_NO_CONTENT,
             )
         except PermissionDenied as e:
             return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)

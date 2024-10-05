@@ -12,7 +12,7 @@ from .views import (
 app_name = "accounts"
 
 urlpatterns = [
-    path("student/signup/", UserRegisterationView.as_view(), name="student-sign-up"),
+    path("student/register/", UserRegisterationView.as_view(), name="student-register"),
     path("password/reset/", PasswordResetView.as_view(), name="password-reset"),
     path("students/", StudentListView.as_view(), name="student-list"),
     path(

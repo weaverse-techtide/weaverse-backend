@@ -9,10 +9,15 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     회원가입을 위한 시리얼라이저입니다.
     """
 
+    confirm_password = serializers.CharField(write_only=True, required=True)
+
     class Meta:
         model = CustomUser
-        fields = ["email", "password", "nickname"]
-        extra_kwargs = {"password": {"write_only": True}}
+        fields = ["email", "nickname", "password", "confirm_password"]
+        extra_kwargs = {
+            "password": {"write_only": True},
+            "confirm_password": {"write_only": True},
+        }
 
 
 class PasswordResetSerializer(serializers.Serializer):
@@ -73,7 +78,7 @@ class PasswordResetSerializer(serializers.Serializer):
         """
         user = self.context["request"].user
         if not user.check_password(value):
-            raise serializers.ValidationError("현재 비밀번호가 올바르지 않습니다.")
+            raise serializers.ValidationError("기존 비밀번호가 올바르지 않습니다.")
         return value
 
     def save(self, **kwargs):
@@ -213,9 +218,9 @@ class CustomUserDetailSerializer(serializers.ModelSerializer):
 
         password = data.get("password")
         confirm_password = data.get("confirm_password")
+
         if password and confirm_password and password != confirm_password:
             raise serializers.ValidationError("비밀번호가 일치하지 않습니다.")
-
         if (
             self.instance
             and password
@@ -224,7 +229,6 @@ class CustomUserDetailSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"password": "이전과 동일한 비밀번호를 사용할 수 없습니다."}
             )
-
         return data
 
     def create(self, validated_data):
@@ -236,7 +240,6 @@ class CustomUserDetailSerializer(serializers.ModelSerializer):
             password = validated_data.pop("password", None)
             validated_data.pop("confirm_password")
             user = CustomUser.objects.create_user(password=password, **validated_data)
-
             return user
         except Exception as e:
             raise serializers.ValidationError("사용자 생성 중 오류가 발생했습니다.")

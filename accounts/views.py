@@ -2,7 +2,7 @@ from django.db import transaction
 from django.db.utils import DatabaseError
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, generics, mixins, status
-from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 

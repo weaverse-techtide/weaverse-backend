@@ -1,107 +1,227 @@
-from rest_framework import status
-from rest_framework.views import APIView
+from django.db import transaction
+from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from courses.models import Curriculum
+from .models import Cart, CartItem, Order, OrderItem
+from .serializers import (
+    CartItemSerializer,
+    CartSerializer,
+    OrderItemSerializer,
+    OrderSerializer,
+)
 
-from .models import Cart, CartItem
-from .serializers import CartSerializer, CartItemSerializer
 
+class CartItemListCreateView(generics.GenericAPIView):
+    """
+    사용자의 장바구니를 조회하고, 상품을 추가합니다.
+    - [GET]: 사용자의 장바구니를 조회합니다.
+    - [POST]: 사용자의 장바구니에 상품을 추가합니다.
+    """
 
-class CartItemView(APIView):
+    queryset = CartItem.objects.all()
+    serializer_class = CartItemSerializer
+    permission_classes = [IsAuthenticated]
 
-    def get_cart(self, user):
-        """
-        사용자별 장바구니를 조회합니다. 없으면 새로 생성합니다.
-        """
-        cart, _ = Cart.objects.get_or_create(user=user)
-        return cart
+    def get_queryset(self):
+        return self.queryset.filter(cart__user=self.request.user)
 
-    def get_cart_item(self, cart, item_id):
-        """
-        사용자별 장바구니에 있는 특정 상품을 조회합니다.
-        """
-        try:
-            return CartItem.objects.get(id=item_id, cart=cart)
-        except CartItem.DoesNotExist:
-            return Response(
-                {"detail": "카트에 상품이 없습니다."}, status=status.HTTP_404_NOT_FOUND
-            )
-
-    def get(self, request, item_id=None):
-        """
-        장바구니에 있는 상품들을 조회하며, item_id가 주어지면 개별 상품을 조회합니다.
-        """
-        cart = self.get_cart(request.user)
-
-        if item_id is None:
-            serializer = CartSerializer(cart)
-        else:
-            cart_item = self.get_cart_item(cart, item_id)
-            if cart_item is None:
-                return Response(
-                    {"detail": "장바구니에 상품이 없습니다."},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-            serializer = CartItemSerializer(cart_item)
-
+    def get(self, request):
+        cart, _ = Cart.objects.get_or_create(user=request.user)
+        serializer = CartSerializer(cart)
         return Response(serializer.data)
 
     def post(self, request):
-        """
-        장바구니에 새 상품을 추가합니다.
-        """
-        cart = self.get_cart(request.user)
-        curriculum_id = request.data.get("curriculum_id")
-        quantity = int(request.data.get("quantity", 1))
+        cart, _ = Cart.objects.get_or_create(user=request.user)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        if quantity < 0:
+        # 상품이 장바구니와 주문에 있는지 확인합니다. 있을 시 예외처리합니다.
+        with transaction.atomic():
+            existing_item = CartItem.objects.filter(
+                cart=cart,
+                curriculum=serializer.validated_data.get("curriculum"),
+                course=serializer.validated_data.get("course"),
+            ).first()
+
+            if existing_item:
+                return Response(
+                    {"detail": "이 상품은 이미 장바구니에 있습니다."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            existing_order_item = OrderItem.objects.filter(
+                order__user=request.user,
+                curriculum=serializer.validated_data.get("curriculum"),
+                course=serializer.validated_data.get("course"),
+            ).first()
+
+            if existing_order_item:
+                return Response(
+                    {"detail": "이 상품은 이미 주문 목록에 있습니다."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            serializer.save(cart=cart)
+
+        return Response(
+            {"detail": "상품이 장바구니에 추가되었습니다.", "data": serializer.data},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class CartItemDestroyView(generics.GenericAPIView):
+    """
+    [DELETE]: 사용자의 장바구니에서 특정 상품을 삭제합니다.
+    """
+
+    queryset = CartItem.objects.all()
+    serializer_class = CartItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return self.queryset.filter(cart__user=self.request.user)
+
+    def delete(self, request, pk):
+        cart_item = self.get_queryset().filter(pk=pk).first()
+        if not cart_item:
             return Response(
-                {"detail": "수량은 0 이상이어야 합니다."},
+                {"detail": "상품이 없습니다."}, status=status.HTTP_404_NOT_FOUND
+            )
+        cart_item.delete()
+        return Response(
+            {"detail": "상품이 장바구니에서 삭제되었습니다."},
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+
+class OrderItemListCreateView(generics.GenericAPIView):
+    """
+    사용자의 주문을 조회하고, 상품을 추가합니다.
+    - [GET]: 사용자의 주문 항목을 조회합니다.
+    - [POST]: 사용자의 주문에 상품을 추가합니다.
+    """
+
+    queryset = OrderItem.objects.all()
+    serializer_class = OrderItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return self.queryset.filter(order__user=self.request.user)
+
+    def get(self, request):
+        order, _ = Order.objects.get_or_create(user=request.user)
+        serializer = OrderSerializer(order)
+        return Response(serializer.data)
+
+    def post(self, request):
+        order, _ = Order.objects.get_or_create(user=request.user)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # 상품이 장바구니와 주문에 있는지 확인합니다. 있을 시 예외처리합니다.
+        with transaction.atomic():
+            existing_item = OrderItem.objects.filter(
+                order=order,
+                curriculum=serializer.validated_data.get("curriculum"),
+                course=serializer.validated_data.get("course"),
+            ).first()
+
+            if existing_item:
+                return Response(
+                    {"detail": "이 상품은 이미 주문 목록에 있습니다."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            existing_cart_item = CartItem.objects.filter(
+                cart__user=request.user,
+                curriculum=serializer.validated_data.get("curriculum"),
+                course=serializer.validated_data.get("course"),
+            ).first()
+
+            if existing_cart_item:
+                return Response(
+                    {"detail": "이 상품은 이미 장바구니에 있습니다."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            serializer.save(order=order)
+
+        return Response(
+            {"detail": "상품이 주문에 추가되었습니다.", "data": serializer.data},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class OrderItemDestroyView(generics.GenericAPIView):
+    """
+    [DELETE]: 사용자의 주문에서 특정 상품을 삭제합니다.
+    """
+
+    queryset = OrderItem.objects.all()
+    serializer_class = OrderItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return self.queryset.filter(order__user=self.request.user)
+
+    def delete(self, request, pk):
+        order_item = self.get_queryset().filter(pk=pk).first()
+        if not order_item:
+            return Response(
+                {"detail": "상품이 없습니다."}, status=status.HTTP_404_NOT_FOUND
+            )
+        order_item.delete()
+        return Response(
+            {"detail": "상품이 주문에서 삭제되었습니다."},
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+
+class CartToOrderConversionView(generics.GenericAPIView):
+    """
+    [POST]: 사용자의 장바구니에 있는 모든 상품을 주문으로 전환합니다.
+    """
+
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        cart, _ = Cart.objects.get_or_create(user=user)
+        order, _ = Order.objects.get_or_create(user=user)
+        if not cart or not cart.cart_items.exists():
+            return Response(
+                {"detail": "장바구니가 비어있습니다."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        try:
-            curriculum = Curriculum.objects.get(id=curriculum_id)
-        except Curriculum.DoesNotExist:
-            return Response(
-                {"detail": "해당되는 커리큘럼이 없습니다."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        # 장바구니에 있는 모든 상품을 주문으로 전환합니다. 이미 주문에 있는 상품은 건너뜁니다.
+        with transaction.atomic():
+            for cart_item in cart.cart_items.all():
+                existing_order_item = OrderItem.objects.filter(
+                    order=order,
+                    curriculum=cart_item.curriculum,
+                    course=cart_item.course,
+                ).first()
 
-        cart_item, created = CartItem.objects.update_or_create(
-            cart=cart,
-            curriculum=curriculum,
-            defaults={"quantity": quantity},
-        )
+                if existing_order_item:
+                    continue
 
-        serializer = CartItemSerializer(cart_item)
-        response_data = serializer.data
-        if created:
-            response_data["message"] = "장바구니에 새로운 상품이 추가되었습니다."
-        else:
-            response_data["message"] = "장바구니의 상품이 업데이트되었습니다."
+                OrderItem.objects.create(
+                    order=order,
+                    curriculum=cart_item.curriculum,
+                    course=cart_item.course,
+                    quantity=cart_item.quantity,
+                )
 
+            cart.cart_items.all().delete()
+
+        serializer = OrderSerializer(order)
         return Response(
-            response_data,
-            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
-        )
-
-    def delete(self, request, item_id):
-        """
-        장바구니에 있는 상품을 삭제합니다.
-        """
-        cart = self.get_cart(request.user)
-        cart_item = self.get_cart_item(cart, item_id)
-
-        if cart_item is None:
-            return Response(
-                {"detail": "해당되는 상품이 없습니다."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        cart_item.delete()
-        return Response(
-            {"message": "장바구니에서 상품이 삭제되었습니다."},
-            status=status.HTTP_204_NO_CONTENT,
+            {
+                "detail": "장바구니의 모든 상품이 주문으로 전환되었습니다.",
+                "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
         )

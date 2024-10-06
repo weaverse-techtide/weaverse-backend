@@ -16,7 +16,7 @@ class Image(models.Model):
 
 
 class Video(models.Model):
-    topic = models.OneToOneField(Topic, on_delete=models.CASCADE, related_name="videos")
+    topic = models.OneToOneField(Topic, on_delete=models.CASCADE, related_name="video")
     title = models.CharField(max_length=255, verbose_name="비디오 제목")
     file = models.FileField(upload_to="videos/", verbose_name="비디오 파일")
     created_at = models.DateTimeField(auto_now_add=True)

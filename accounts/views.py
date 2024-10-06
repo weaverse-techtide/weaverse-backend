@@ -1,7 +1,6 @@
 from django.db import transaction
 from django.db.utils import DatabaseError
 from django.shortcuts import get_object_or_404
-from jwtauth.authentication import JWTAuthentication
 from rest_framework import filters, generics, mixins, status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.pagination import PageNumberPagination

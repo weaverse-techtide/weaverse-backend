@@ -82,81 +82,11 @@ class ImageCreateView(generics.CreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-from .serializers import ImageSerializer, VideoSerializer, WatchHistorySerializer
-
-
-class ImageCreateView(generics.CreateAPIView):
-    # POST 요청: 이미지 파일을 업로드합니다.
-
-    queryset = Image.objects.all()
-    serializer_class = ImageSerializer
-    permission_classes = []
-    parser_classes = (MultiPartParser, FormParser)
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            file = request.FILES.get("file")
-            if not file:
-                return Response(
-                    {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # 이미지 파일 검증
-            try:
-                img = PILImage.open(file)
-                img.verify()
-            except:
-                return Response(
-                    {"error": "Invalid image file"}, status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # S3 클라이언트 설정
-            s3_client = boto3.client(
-                "s3",
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                region_name=settings.AWS_S3_REGION_NAME,
-            )
-
-            try:
-                # 이미지 최적화 (선택사항)
-                img = PILImage.open(file)
-                buffer = io.BytesIO()
-                img.save(buffer, format="JPEG", quality=85)
-                buffer.seek(0)
-
-                # S3에 파일 업로드
-                file_name = f"images/{file.name}"
-                s3_client.upload_fileobj(
-                    buffer,
-                    settings.AWS_STORAGE_BUCKET_NAME,
-                    file_name,
-                    ExtraArgs={"ContentType": "image/jpeg"},
-                )
-
-                # 업로드된 파일의 URL 생성
-                file_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{file_name}"
-
-                # 이미지 객체 생성 및 저장
-                image = serializer.save(file=file_url)
-
-                return Response(
-                    self.get_serializer(image).data, status=status.HTTP_201_CREATED
-                )
-            except ClientError as e:
-                return Response(
-                    {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 class ImageListCreateView(generics.ListCreateAPIView):
     # GET 요청: 이미지 파일 목록을 가져옵니다.
 
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
-    permission_classes = []
     permission_classes = []
 
     def perform_create(self, serializer):
@@ -170,7 +100,6 @@ class ImageRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
-    permission_classes = []
     permission_classes = []
 
     def check_object_permissions(self, request, obj):
@@ -230,63 +159,11 @@ class VideoCreateView(generics.CreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class VideoCreateView(generics.CreateAPIView):
-    # POST 요청: 영상 파일을 업로드합니다.
-
-    queryset = Video.objects.all()
-    serializer_class = VideoSerializer
-    permission_classes = []
-    parser_classes = (MultiPartParser, FormParser)
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            file = request.FILES.get("file")
-            if not file:
-                return Response(
-                    {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # S3 클라이언트 설정
-            s3_client = boto3.client(
-                "s3",
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                region_name=settings.AWS_S3_REGION_NAME,
-            )
-
-            try:
-                # S3에 파일 업로드
-                file_name = f"videos/{file.name}"
-                s3_client.upload_fileobj(
-                    file,
-                    settings.AWS_STORAGE_BUCKET_NAME,
-                    file_name,
-                    ExtraArgs={"ContentType": file.content_type},
-                )
-
-                # 업로드된 파일의 URL 생성
-                file_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{file_name}"
-
-                # 비디오 객체 생성 및 저장
-                video = serializer.save(file=file_url)
-
-                return Response(
-                    self.get_serializer(video).data, status=status.HTTP_201_CREATED
-                )
-            except ClientError as e:
-                return Response(
-                    {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 class VideoListCreateView(generics.ListCreateAPIView):
     # GET 요청: 영상 파일 목록을 조회합니다.
 
     queryset = Video.objects.all()
     serializer_class = VideoSerializer
-    permission_classes = []
     permission_classes = []
 
     def perform_create(self, serializer):
@@ -300,7 +177,6 @@ class VideoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
     queryset = Video.objects.all()
     serializer_class = VideoSerializer
-    permission_classes = []
     permission_classes = []
 
     def check_object_permissions(self, request, obj):

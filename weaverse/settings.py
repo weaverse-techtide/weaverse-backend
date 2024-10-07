@@ -14,6 +14,7 @@ DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
 # 카카오페이 연동 설정
+BASE_URL = os.environ.get("BASE_URL")
 KAKAOPAY_CID = os.environ.get("KAKAOPAY_CID")
 KAKAOPAY_SECRET_KEY = os.environ.get("KAKAOPAY_SECRET_KEY")
 

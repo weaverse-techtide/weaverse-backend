@@ -1,20 +1,20 @@
+from django.db import transaction
+from django.db.utils import DatabaseError
 from django.shortcuts import get_object_or_404
-from jwtauth.authentication import JWTAuthentication
-from rest_framework import generics, status
-from rest_framework.exceptions import NotFound, PermissionDenied
-from rest_framework.filters import OrderingFilter
+from rest_framework import filters, generics, mixins, status
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import CustomUser
-from .permissions import (
-    IsAuthenticatedOrCreateOnly,
-    IsSuperUser,
-    IsTutor,
-    IsTutorOrSuperUserOrSuperUserCreateOnly,
+from .permissions import IsAuthenticatedAndActive, IsSuperUser, IsTutor
+from .serializers import (
+    CustomUserDetailSerializer,
+    PasswordResetSerializer,
+    StudentListSerializer,
+    TutorListSerializer,
+    UserRegistrationSerializer,
 )
-from .serializers import CustomUserSerializer, PasswordResetSerializer
 
 
 class StandardResultsSetPagination(PageNumberPagination):
@@ -27,190 +27,334 @@ class StandardResultsSetPagination(PageNumberPagination):
     max_page_size = 100
 
 
-class PasswordResetView(generics.GenericAPIView):
+class UserRegisterationView(mixins.CreateModelMixin, generics.GenericAPIView):
     """
-    비밀번호를 재설정합니다.
-    POST: 비밀번호 재설정 (PUT이 아닌)
+    회원가입을 위한 뷰입니다.
+    - POST: 학생 생성
+    - 회원가입 또는 유효성 검사에 실패했을 때 에러메시지를 출력합니다.
     """
 
-    serializer_class = PasswordResetSerializer
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
+    queryset = CustomUser.objects.all()
+
+    serializer_class = UserRegistrationSerializer
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(
-            {"detail": "비밀번호가 성공적으로 변경되었습니다."},
-            status=status.HTTP_200_OK,
+
+        if serializer.is_valid():
+            try:
+                user = self.perform_create(serializer)
+                headers = self.get_success_headers(serializer.data)
+                return Response(
+                    {
+                        "message": "성공적으로 회원가입 되었습니다.",
+                        "user_id": user.id,
+                    },
+                    status=status.HTTP_201_CREATED,
+                    headers=headers,
+                )
+            except Exception as e:
+                return Response(
+                    {
+                        "message": "회원가입에 실패했습니다. 다시 시도해주세요.",
+                        "error": str(e),
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
+            return Response(
+                {
+                    "message": "실패했습니다. 다시 시도해주세요.",
+                    "errors": serializer.errors,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    def perform_create(self, serializer):
+        user = CustomUser.objects.create_user(
+            email=serializer.validated_data["email"],
+            password=serializer.validated_data["password"],
+            nickname=serializer.validated_data["nickname"],
         )
+        return user
 
 
-class StudentListCreateView(
-    generics.GenericAPIView,
-    generics.mixins.ListModelMixin,
-    generics.mixins.CreateModelMixin,
-):
+class PasswordResetView(generics.GenericAPIView):
     """
-    학생 유저를 목록 조회 및 생성합니다.
-    - GET: 학생 목록 조회
-    - POST: 학생 생성
+    비밀번호를 재설정합니다.
+    - POST: 비밀번호 재설정
     """
 
-    queryset = CustomUser.objects.filter(is_staff=False, is_active=True)
-    serializer_class = CustomUserSerializer
-    permission_classes = [IsAuthenticatedOrCreateOnly]  # 자동 403 Forbidden
-    pagination_class = StandardResultsSetPagination
-    authentication_classes = JWTAuthentication  # 자동 401 Unauthorized
-
-    ordering_fields = ["email", "first_name", "last_name", "date_joined"]
-    ordering = ["-date_joined"]  # 기본 정렬 순서
-
-    def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
+    serializer_class = PasswordResetSerializer
+    permission_classes = [IsAuthenticatedAndActive]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(is_staff=False, is_active=True)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                serializer.save()
+                return Response(
+                    {"detail": "비밀번호가 성공적으로 변경되었습니다."},
+                    status=status.HTTP_200_OK,
+                )
+            except Exception as e:
+                return Response(
+                    {
+                        "error": "비밀번호 재설정 중 오류가 발생했습니다. 다시 시도해 주세요."
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class StudentListView(mixins.ListModelMixin, generics.GenericAPIView):
+    """
+    학생 유저를 목록 조회합니다.
+    - 인증된 사용자만이 접근가능합니다.
+    - GET: 학생 목록 조회
+    """
+
+    queryset = CustomUser.objects.filter(is_staff=False, is_active=True)
+    serializer_class = StudentListSerializer
+    permission_classes = [IsAuthenticatedAndActive]
+    pagination_class = StandardResultsSetPagination
+
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = [
+        "email",
+        "nickname",
+        "created_at",
+    ]  #  클라이언트가 정렬에 사용할 수 있는 필드들을 지정
+    ordering = ["-created_at"]  # 기본 정렬 순서
+
+    def get(self, request, *args, **kwargs):
+        try:
+            return self.list(request, *args, **kwargs)
+        except PermissionDenied:
+            return Response(
+                {"error": "이 목록을 조회할 권한이 없습니다."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except DatabaseError:
+            return Response(
+                {
+                    "error": "데이터베이스 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"학생 목록 조회 중 오류가 발생했습니다: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class StudentRetrieveUpdateDestroyView(
-    generics.GenericAPIView,
     generics.mixins.RetrieveModelMixin,
     generics.mixins.UpdateModelMixin,
     generics.mixins.DestroyModelMixin,
+    generics.GenericAPIView,
 ):
     """
-    학생 유저에 대해 조회, 수정, 삭제합니다.
-    GET: 학생 상세 조회
-    PUT: 학생 정보 수정
-    DELETE: 학생 소프트 삭제
+    학생이 학생 정보를 조회, 수정, 삭제합니다.
+    - GET: 학생 상세 조회
+    - PUT: 학생 정보 수정
+    - DELETE: 학생 삭제(소프트 삭제)
     """
 
-    queryset = CustomUser.objects.filter(is_staff=False)
-    serializer_class = CustomUserSerializer
-    permission_classes = [IsAuthenticated]
-    authentication_classes = JWTAuthentication
+    queryset = CustomUser.objects.filter(is_staff=False, is_active=True)
+    serializer_class = CustomUserDetailSerializer
+    permission_classes = [IsAuthenticatedAndActive]
 
     def get_object(self):
         obj = get_object_or_404(self.get_queryset(), pk=self.kwargs["pk"])
         if self.request.user.pk != obj.pk:
-            raise PermissionDenied("해당 사용자는 권한이 없는 접근입니다.")
+            raise PermissionDenied("해당 사용자의 정보에 접근할 권한이 없습니다.")
+        self.check_object_permissions(self.request, obj)
         return obj
 
     def get(self, request, *args, **kwargs):
-        return self.retrieve(request, *args, **kwargs)
+        try:
+            return self.retrieve(request, *args, **kwargs)
+        except PermissionDenied as e:
+            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            return Response(
+                {"error": f"조회 중 오류가 발생했습니다: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
+        return self._update(request, *args, **kwargs)
 
+    def patch(self, request, *args, **kwargs):
+        return self._update(request, *args, partial=True, **kwargs)
+
+    def _update(self, request, *args, partial=False, **kwargs):
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(
+                instance, data=request.data, partial=partial
+            )
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except PermissionDenied as e:
+            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except ValidationError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response(
+                {"error": f"수정 중 오류가 발생했습니다: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+        if password:
+            instance.set_password(password)
+        return super().update(instance, validated_data)
+
+    @transaction.atomic
     def delete(self, request, *args, **kwargs):
-        user = self.get_object()
-        user.is_active = False
-        user.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        try:
+            user = self.get_object()
+            user.is_active = False
+            user.save()
+            return Response(
+                {"message": "계정이 비활성화되었습니다."},
+                status=status.HTTP_204_NO_CONTENT,
+            )
+        except PermissionDenied as e:
+            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            return Response(
+                {"error": f"삭제 중 오류가 발생했습니다: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
-class TutorListCreateView(
+class TutorListView(
+    mixins.ListModelMixin,
     generics.GenericAPIView,
-    generics.mixins.ListModelMixin,
-    generics.mixins.CreateModelMixin,
 ):
     """
-    관리자 사용자 목록 조회 및 생성합니다.
-    GET: 관리자 목록 조회
-    POST: 관리자 생성
+    관리자가 강사 목록을 조회합니다.
+    - GET: 강사 목록 조회
     """
 
     queryset = CustomUser.objects.filter(is_staff=True, is_active=True)
-    serializer_class = CustomUserSerializer
-    permission_classes = [IsTutorOrSuperUserOrSuperUserCreateOnly]
+    serializer_class = TutorListSerializer
+    permission_classes = [IsSuperUser]
     pagination_class = StandardResultsSetPagination
-    authentication_classes = JWTAuthentication
 
-    ordering_fields = ["email", "first_name", "last_name", "date_joined"]
-    ordering = ["-date_joined"]  # 기본 정렬 순서
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ["email", "nickname", "created_at"]
+    ordering = ["-created_at"]  # 기본 정렬 순서
 
     def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(is_staff=True, is_active=True)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            return self.list(request, *args, **kwargs)
+        except PermissionDenied:
+            return Response(
+                {"error": "이 목록을 조회할 권한이 없습니다."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except DatabaseError:
+            return Response(
+                {
+                    "error": "데이터베이스 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"강사 목록 조회 중 오류가 발생했습니다: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class TutorRetrieveUpdateDestroyView(
-    generics.GenericAPIView,
     generics.mixins.RetrieveModelMixin,
     generics.mixins.UpdateModelMixin,
     generics.mixins.DestroyModelMixin,
+    generics.GenericAPIView,
 ):
     """
-    관리자 사용자 조회, 수정, 삭제합니다.
-    GET: 관리자 상세 조회
-    PUT: 관리자 정보 수정
-    DELETE: 관리자 소프트 삭제
+    관리자나 강사가 강사 정보를 조회, 수정, 삭제합니다.
+    - GET: 강사 상세 조회
+    - PUT: 강사 정보 수정
+    - DELETE: 강사 삭제 (소프트 삭제)
     """
 
-    queryset = CustomUser.objects.filter(is_staff=True)
-    serializer_class = CustomUserSerializer
+    queryset = CustomUser.objects.filter(is_staff=True, is_active=True)
+    serializer_class = CustomUserDetailSerializer
     permission_classes = [IsTutor | IsSuperUser]
-    authentication_classes = JWTAuthentication
+
+    def get_object(self):
+        obj = get_object_or_404(self.get_queryset(), pk=self.kwargs["pk"])
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def get(self, request, *args, **kwargs):
-        return self.retrieve(request, *args, **kwargs)
+        try:
+            return self.retrieve(request, *args, **kwargs)
+        except PermissionDenied as e:
+            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            return Response(
+                {"error": f"조회 중 오류가 발생했습니다: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
+        return self._update(request, *args, **kwargs)
 
-    def delete(self, request, *args, **kwargs):
-        tutor = self.get_object()
-        tutor.is_active = False
-        tutor.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def patch(self, request, *args, **kwargs):
+        return self._update(request, *args, partial=True, **kwargs)
 
-
-class TutorStudentView(generics.ListAPIView):
-    """
-    특정 튜터의 학생 목록을 조회합니다.
-    GET: 튜터의 학생 목록 조회
-    """
-
-    serializer_class = CustomUserSerializer
-    permission_classes = [IsAuthenticated & (IsTutor | IsSuperUser)]
-    authentication_classes = [JWTAuthentication]
-    pagination_class = StandardResultsSetPagination
-    filter_backends = [OrderingFilter]
-
-    ordering_fields = ["email", "first_name", "last_name", "created_at"]
-    ordering = ["created_at"]  # 기본 정렬 순서
-
-    def get_queryset(self):
-        tutor_id = self.kwargs.get("tutor_id")
+    def _update(self, request, *args, partial=False, **kwargs):
         try:
-            tutor = CustomUser.objects.get(id=tutor_id, is_staff=True)
-        except CustomUser.DoesNotExist:
-            raise NotFound("해당 튜터를 찾을 수 없습니다.")
+            instance = self.get_object()
+            serializer = self.get_serializer(
+                instance, data=request.data, partial=partial
+            )
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return Response(serializer.data)
+        except PermissionDenied as e:
+            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except ValidationError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response(
+                {"error": f"수정 중 오류가 발생했습니다: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
-        if self.request.user.id != tutor_id and not self.request.user.is_superuser:
-            raise PermissionDenied("이 정보에 접근할 권한이 없습니다.")
+    @transaction.atomic
+    def delete(self, request, *args, **kwargs):
+        try:
+            tutor = self.get_object()
+            tutor.is_active = False
+            tutor.save()
+            return Response(
+                {"message": "강사 계정이 비활성화되었습니다."},
+                status=status.HTTP_204_NO_CONTENT,
+            )
+        except PermissionDenied as e:
+            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            return Response(
+                {"error": f"삭제 중 오류가 발생했습니다: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
-        return tutor.students.filter(is_active=True)
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(
-            {
-                "tutor_id": self.kwargs.get("tutor_id"),
-                "student_count": queryset.count(),
-                "students": serializer.data,
-            }
-        )
+    def check_object_permissions(self, request, obj):
+        if not request.user.is_superuser and request.user.pk != obj.pk:
+            raise PermissionDenied("해당 강사의 정보에 접근할 권한이 없습니다.")
+        super().check_object_permissions(request, obj)

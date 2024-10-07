@@ -381,7 +381,7 @@ class TestCourseList:
 
         # Then
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 5
+        assert response.data["count"] == 5
 
 
 @pytest.mark.django_db
@@ -470,7 +470,7 @@ class TestCurriculumList:
 
         # Then
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 5
+        assert response.data["count"] == 5
 
 
 @pytest.mark.django_db

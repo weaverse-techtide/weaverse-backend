@@ -13,6 +13,10 @@ DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
+# 카카오페이 연동 설정
+KAKAOPAY_CID = os.environ.get("KAKAOPAY_CID")
+KAKAOPAY_SECRET_KEY = os.environ.get("KAKAOPAY_SECRET_KEY")
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",

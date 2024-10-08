@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
-
 from dotenv import load_dotenv
+from django.conf import settings
 
 load_dotenv()
 
@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",  # 소셜 로그인 사이트 별로 구분하고, 설정을 다르게 하기 위해 추가
     "rest_framework",
     "accounts",
     "drf_spectacular",
@@ -27,6 +28,7 @@ INSTALLED_APPS = [
     "courses",
     "materials",
     "payments",
+    "social_django",
 ]
 
 MIDDLEWARE = [
@@ -37,6 +39,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "social_django.middleware.SocialAuthExceptionMiddleware",
 ]
 
 ROOT_URLCONF = "weaverse.urls"
@@ -122,6 +125,14 @@ CSRF_TRUSTED_ORIGINS = [
     "https://www.weaverse.site",
 ]
 
+if settings.DEBUG:
+    CSRF_TRUSTED_ORIGINS.extend(
+        [
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+        ]
+    )
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "accounts.CustomUser"
@@ -136,6 +147,33 @@ SPECTACULAR_SETTINGS = {
     "EXTERNAL_DOCS": {"description": "Weaverse GitHub", "url": ""},
 }
 
+<<<<<<< HEAD
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.google.GoogleOAuth2",
+    "social_core.backends.kakao.KakaoOAuth2",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = settings.DEBUG
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv("SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET")
+SOCIAL_AUTH_KAKAO_KEY = os.getenv("SOCIAL_AUTH_KAKAO_KEY")
+
+SOCIAL_AUTH_PIPELINE = (
+    "social_core.pipeline.social_auth.social_details",
+    "social_core.pipeline.social_auth.social_uid",
+    "social_core.pipeline.social_auth.auth_allowed",
+    "social_core.pipeline.social_auth.social_user",
+    "social_core.pipeline.user.get_username",
+    "jwtauth.pipeline.create_user",
+    "social_core.pipeline.social_auth.associate_user",
+    "social_core.pipeline.social_auth.load_extra_data",
+    "social_core.pipeline.user.user_details",
+)
+
+LOGIN_REDIRECT_URL = "/"
+=======
 # S3 설정
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
@@ -147,3 +185,4 @@ AWS_S3_OBJECT_PARAMETERS = {
 }
 
 DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+>>>>>>> 805b31591c0a3fa2e5a76e55401c19353cc3ebec

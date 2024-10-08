@@ -1,10 +1,9 @@
 import pytest
-from accounts.models import CustomUser
-from accounts.serializers import (CustomUserDetailSerializer,
-                                  StudentListSerializer, TutorListSerializer)
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
+
+from accounts.models import CustomUser
 
 
 @pytest.fixture
@@ -90,7 +89,7 @@ class TestPasswordResetView:
             "confirm_new_password": "confirmnewpassword",
         }
         response = api_client.post(url, data)
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.django_db
@@ -114,7 +113,7 @@ class TestStudentListView:
     def test_student_list_view_unauthenticated(self, api_client):
         url = reverse("accounts:student-list")
         response = api_client.get(url)
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.django_db

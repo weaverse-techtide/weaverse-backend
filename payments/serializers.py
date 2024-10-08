@@ -22,8 +22,8 @@ class CartItemSerializer(serializers.ModelSerializer):
             "price",
         ]
         read_only_fields = [
-            "item_name",
-            "price",
+            "id",
+            "cart",
             "quantity",
             "created_at",
             "updated_at",
@@ -63,9 +63,7 @@ class CartSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = [
-            "user",
-            "total_items",
-            "total_price",
+            "id",
             "created_at",
             "updated_at",
         ]
@@ -91,12 +89,10 @@ class OrderItemSerializer(serializers.ModelSerializer):
             "price",
         ]
         read_only_fields = [
+            "id",
             "quantity",
             "created_at",
             "updated_at",
-            "expiry_date",
-            "item_name",
-            "price",
         ]
 
     def validate(self, data):
@@ -134,36 +130,9 @@ class OrderSerializer(serializers.ModelSerializer):
             "total_price",
         ]
         read_only_fields = [
-            "user",
-            "order_status",
+            "id",
             "created_at",
             "updated_at",
-            "total_items",
-            "total_price",
-        ]
-
-
-class PaymentSerializer(serializers.ModelSerializer):
-    """
-    결제 모델의 시리얼라이저입니다.
-    """
-
-    class Meta:
-        model = Payment
-        fields = [
-            "id",
-            "user",
-            "order",
-            "payment_status",
-            "payment_method",
-            "amount",
-            "transaction_id",
-            "paid_at",
-        ]
-        read_only_fields = [
-            "user",
-            "transaction_id",
-            "paid_at",
         ]
 
 
@@ -185,4 +154,40 @@ class UserBillingAddressSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["created_at", "updated_at"]
+        read_only_fields = ["id", "user", "created_at", "updated_at"]
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    """
+    결제 모델의 시리얼라이저입니다.
+    """
+
+    class Meta:
+        model = Payment
+        fields = [
+            "id",
+            "user",
+            "order",
+            "payment_status",
+            "amount",
+            "transaction_id",
+            "created_at",
+            "updated_at",
+            "paid_at",
+            "cancelled_at",
+            "fail_reason",
+            "billing_address",
+        ]
+        read_only_fields = [
+            "id",
+            "user",
+            "order",
+            "payment_status",
+            "payment_method",
+            "amount",
+            "transaction_id",
+            "created_at",
+            "updated_at",
+            "paid_at",
+            "cancelled_at",
+        ]

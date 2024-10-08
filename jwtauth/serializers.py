@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import BlacklistedToken
+from .models import BlacklistedToken, SocialAccount
 from django.contrib.auth import get_user_model
 
 
@@ -18,6 +18,26 @@ class LoginSerializer(serializers.ModelSerializer):
 
         model = get_user_model()
         fields = ["email", "password"]
+
+
+class SocialLoginSerializer(serializers.Serializer):
+    """
+    이 시리얼라이저는 소셜 로그인 요청을 처리합니다.
+    """
+
+    provider = serializers.CharField(required=True)
+    access_token = serializers.CharField(required=True)
+
+    def validate_provider(self, value):
+        """
+        제공자가 지원되는지 확인합니다.
+        """
+        supported_providers = ["google-oauth2", "kakao"]
+        if value not in supported_providers:
+            raise serializers.ValidationError(
+                f"지원되지 않는 제공자입니다: {value}. 지원되는 제공자는 {supported_providers}입니다."
+            )
+        return value
 
 
 class LogoutSerializer(serializers.ModelSerializer):
@@ -55,3 +75,17 @@ class RefreshTokenSerializer(serializers.ModelSerializer):
 
         model = BlacklistedToken
         fields = ["refresh_token"]
+
+
+class SocialAccountSerializer(serializers.ModelSerializer):
+    """
+    이 시리얼라이저는 소셜 계정을 처리합니다.
+    """
+
+    class Meta:
+        """
+        이 시리얼라이저는 SocialAccount 모델을 사용합니다.
+        """
+
+        model = SocialAccount
+        fields = ["provider", "uid"]

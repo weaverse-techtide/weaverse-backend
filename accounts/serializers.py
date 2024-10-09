@@ -1,4 +1,5 @@
 from django.contrib.auth.hashers import check_password
+from PIL import Image
 from rest_framework import serializers
 
 from .models import CustomUser
@@ -175,6 +176,20 @@ class CustomUserDetailSerializer(serializers.ModelSerializer):
             return CustomUser.objects.filter(is_staff=True, is_superuser=False).count()
         return None
 
+    def validate_nickname(self, value):
+        """
+        닉네임 필드의 데이터를 검증합니다.
+        """
+        if (
+            CustomUser.objects.filter(nickname=value)
+            .exclude(id=self.instance.id if self.instance else None)
+            .exists()
+        ):
+            raise serializers.ValidationError(
+                {"nickname": "사용할 수 없는 닉네임입니다."}
+            )
+        return value
+
     def validate_email(self, value):
         """
         이메일 필드의 데이터를 검증합니다.
@@ -209,6 +224,30 @@ class CustomUserDetailSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def validate_profile_image(self, value):
+        # 파일 형식 확인
+        valid_extensions = ["jpg", "jpeg", "png", "gif"]  # 허용할 파일 확장자
+        if value:
+            # 파일의 확장자 확인
+            extension = value.name.split(".")[-1].lower()
+            if extension not in valid_extensions:
+                raise ValidationError(
+                    f"허용되지 않는 파일 형식입니다. {', '.join(valid_extensions)} 형식만 가능합니다."
+                )
+
+            # 파일 크기 확인 (예: 5MB 이하)
+            if value.size > 5 * 1024 * 1024:  # 5MB
+                raise ValidationError("파일 크기는 5MB 이하이어야 합니다.")
+
+            # 이미지 유효성 검사
+            try:
+                img = Image.open(value)
+                img.verify()  # 이미지 파일의 유효성을 검사합니다.
+            except Exception:
+                raise ValidationError("유효한 이미지 파일이 아닙니다.")
+
+        return value
+
     def validate(self, data):
         """
         전체 필드에 대한 데이터를 검증합니다.
@@ -239,6 +278,8 @@ class CustomUserDetailSerializer(serializers.ModelSerializer):
         try:
             password = validated_data.pop("password", None)
             validated_data.pop("confirm_password")
+
+            # 사용자 생성
             user = CustomUser.objects.create_user(password=password, **validated_data)
             return user
         except Exception as e:
@@ -252,6 +293,7 @@ class CustomUserDetailSerializer(serializers.ModelSerializer):
             password = validated_data.pop("password", None)
             validated_data.pop("confirm_password", None)
 
+            # 사용자 업데이트
             user = super().update(instance, validated_data)
 
             if password:

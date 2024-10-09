@@ -109,6 +109,8 @@ USE_I18N = True
 
 USE_TZ = True
 
+
+# 정적 파일 설정
 STATIC_URL = "static/"
 STATIC_ROOT = os.getenv("STATIC_ROOT", BASE_DIR / "static")
 
@@ -118,8 +120,15 @@ if STATICFILES_DIRS:
 else:
     STATICFILES_DIRS = [BASE_DIR / "staticfiles"]
 
+# CSRF 설정
 CSRF_TRUSTED_ORIGINS = [
     "https://www.weaverse.site",
+]
+
+# CORS 설정
+CORS_ALLOWED_ORIGINS = [
+    "https://www.weaverse.site",  # 프로덕션 환경
+    "http://localhost:3000",  # 개발 환경 프론트엔드
 ]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -146,4 +155,8 @@ AWS_S3_OBJECT_PARAMETERS = {
     "CacheControl": "max-age=86400",
 }
 
+# boto3 설정
 DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+# 미디어 파일 설정
+MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"

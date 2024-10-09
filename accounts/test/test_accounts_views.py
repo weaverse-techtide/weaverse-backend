@@ -1,7 +1,6 @@
 import pytest
+# import requests
 from accounts.models import CustomUser
-from accounts.serializers import (CustomUserDetailSerializer,
-                                  StudentListSerializer, TutorListSerializer)
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient

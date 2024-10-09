@@ -1,4 +1,6 @@
 import pytest
+from django.contrib.auth import get_user_model
+
 from accounts.serializers import (
     CustomUserDetailSerializer,
     PasswordResetSerializer,
@@ -6,8 +8,6 @@ from accounts.serializers import (
     TutorListSerializer,
     UserRegistrationSerializer,
 )
-from django.contrib.auth import get_user_model
-from rest_framework.exceptions import ValidationError
 
 User = get_user_model()
 
@@ -21,6 +21,7 @@ class TestUserRegistrationSerializer:
         data = {
             "email": "test@example.com",
             "password": "StrongPass1!",
+            "confirm_password": "StrongPass1!",
             "nickname": "testuser",
         }
         serializer = UserRegistrationSerializer(data=data)

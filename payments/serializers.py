@@ -1,17 +1,12 @@
 from rest_framework import serializers
 
-from .models import Cart, CartItem, Order, OrderItem
+from .models import Cart, CartItem, Order, OrderItem, Payment, UserBillingAddress
 
 
 class CartItemSerializer(serializers.ModelSerializer):
     """
     장바구니에 담긴 상품 모델의 시리얼라이저입니다.
     """
-
-    curriculum_name = serializers.SerializerMethodField()
-    course_title = serializers.SerializerMethodField()
-    curriculum_price = serializers.SerializerMethodField()
-    course_price = serializers.SerializerMethodField()
 
     class Meta:
         model = CartItem
@@ -23,30 +18,16 @@ class CartItemSerializer(serializers.ModelSerializer):
             "quantity",
             "created_at",
             "updated_at",
-            "curriculum_name",
-            "course_title",
-            "curriculum_price",
-            "course_price",
+            "item_name",
+            "price",
         ]
         read_only_fields = [
-            "curriculum_name",
-            "course_title",
-            "curriculum_price",
-            "course_price",
+            "id",
+            "cart",
             "quantity",
+            "created_at",
+            "updated_at",
         ]
-
-    def get_curriculum_name(self, obj):
-        return obj.curriculum.name if obj.curriculum else None
-
-    def get_course_title(self, obj):
-        return obj.course.title if obj.course else None
-
-    def get_curriculum_price(self, obj):
-        return obj.curriculum.price if obj.curriculum else None
-
-    def get_course_price(self, obj):
-        return obj.course.price if obj.course else None
 
     def validate(self, data):
         # 커리큘럼과 코스 중 하나만 선택되었는지 확인합니다.
@@ -69,11 +50,9 @@ class CartSerializer(serializers.ModelSerializer):
     """
 
     cart_items = CartItemSerializer(many=True, read_only=True)
-    total_items = serializers.SerializerMethodField()
-    total_price = serializers.SerializerMethodField()
 
     class Meta:
-        model = Order
+        model = Cart
         fields = [
             "id",
             "user",
@@ -83,18 +62,11 @@ class CartSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-
-    def get_total_items(self, obj):
-        return obj.cart_items.count()
-
-    def get_total_price(self, obj):
-        total = sum(
-            [
-                item.curriculum.price if item.curriculum else item.course.price
-                for item in obj.cart_items.all()
-            ]
-        )
-        return total
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+        ]
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -102,44 +74,26 @@ class OrderItemSerializer(serializers.ModelSerializer):
     주문 상품 모델의 시리얼라이저입니다.
     """
 
-    curriculum_name = serializers.SerializerMethodField()
-    course_title = serializers.SerializerMethodField()
-    curriculum_price = serializers.SerializerMethodField()
-    course_price = serializers.SerializerMethodField()
-
     class Meta:
         model = OrderItem
         fields = [
             "id",
+            "order",
             "curriculum",
             "course",
             "quantity",
             "created_at",
             "updated_at",
-            "curriculum_name",
-            "course_title",
-            "curriculum_price",
-            "course_price",
+            "expiry_date",
+            "item_name",
+            "price",
         ]
         read_only_fields = [
-            "curriculum_name",
-            "course_title",
-            "curriculum_price",
-            "course_price",
+            "id",
             "quantity",
+            "created_at",
+            "updated_at",
         ]
-
-    def get_curriculum_name(self, obj):
-        return obj.curriculum.name if obj.curriculum else None
-
-    def get_course_title(self, obj):
-        return obj.course.title if obj.course else None
-
-    def get_curriculum_price(self, obj):
-        return obj.curriculum.price if obj.curriculum else None
-
-    def get_course_price(self, obj):
-        return obj.course.price if obj.course else None
 
     def validate(self, data):
         # 커리큘럼과 코스 중 하나만 선택되었는지 확인합니다.
@@ -162,29 +116,78 @@ class OrderSerializer(serializers.ModelSerializer):
     """
 
     order_items = OrderItemSerializer(many=True, read_only=True)
-    total_items = serializers.SerializerMethodField()
-    total_price = serializers.SerializerMethodField()
 
     class Meta:
-        model = Cart
+        model = Order
         fields = [
             "id",
             "user",
             "order_items",
+            "order_status",
+            "created_at",
+            "updated_at",
             "total_items",
             "total_price",
+        ]
+        read_only_fields = [
+            "id",
             "created_at",
             "updated_at",
         ]
 
-    def get_total_items(self, obj):
-        return obj.order_items.count()
 
-    def get_total_price(self, obj):
-        total = sum(
-            [
-                item.curriculum.price if item.curriculum else item.course.price
-                for item in obj.order_items.all()
-            ]
-        )
-        return total
+class UserBillingAddressSerializer(serializers.ModelSerializer):
+    """
+    사용자의 결제 수단 모델의 시리얼라이저입니다.
+    """
+
+    class Meta:
+        model = UserBillingAddress
+        fields = [
+            "id",
+            "user",
+            "country",
+            "main_address",
+            "detail_address",
+            "postal_code",
+            "is_default",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "user", "created_at", "updated_at"]
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    """
+    결제 모델의 시리얼라이저입니다.
+    """
+
+    class Meta:
+        model = Payment
+        fields = [
+            "id",
+            "user",
+            "order",
+            "payment_status",
+            "amount",
+            "transaction_id",
+            "created_at",
+            "updated_at",
+            "paid_at",
+            "cancelled_at",
+            "fail_reason",
+            "billing_address",
+        ]
+        read_only_fields = [
+            "id",
+            "user",
+            "order",
+            "payment_status",
+            "payment_method",
+            "amount",
+            "transaction_id",
+            "created_at",
+            "updated_at",
+            "paid_at",
+            "cancelled_at",
+        ]

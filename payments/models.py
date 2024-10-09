@@ -241,7 +241,7 @@ class Payment(models.Model):
     paid_at = models.DateTimeField(null=True, blank=True, verbose_name="결제 일시")
     cancelled_at = models.DateTimeField(null=True, blank=True, verbose_name="취소 일시")
     fail_reason = models.TextField(verbose_name="실패 사유", blank=True, null=True)
-    billing_address = models.OneToOneField(
+    billing_address = models.ForeignKey(
         UserBillingAddress,
         on_delete=models.SET_NULL,
         null=True,

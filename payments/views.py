@@ -564,7 +564,6 @@ class ReceiptView(generics.GenericAPIView):
             "issue_date": timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
             "payment_info": {
                 "payment_id": payment.id,
-                "payment_method": payment.payment_method,
                 "amount": payment.amount,
                 "payment_status": payment.payment_status,
                 "paid_at": (
@@ -576,8 +575,8 @@ class ReceiptView(generics.GenericAPIView):
             "order_info": {
                 "order_id": order.id,
                 "order_status": order.order_status,
-                "total_items": order.total_items,
-                "total_price": order.total_price,
+                "total_items": order.total_items(),
+                "total_price": order.total_price(),
                 "items": [
                     {
                         "name": item.item_name,

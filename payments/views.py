@@ -368,7 +368,6 @@ class PaymentView(generics.GenericAPIView):
             order=order,
             user=request.user,
             payment_status="pending",
-            payment_method="kakaopay",
             amount=order.total_price(),
             transaction_id=kakao_response["tid"],
         )

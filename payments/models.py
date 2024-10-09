@@ -223,7 +223,7 @@ class Payment(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="사용자"
     )
-    order = models.OneToOneField(Order, on_delete=models.CASCADE, verbose_name="주문")
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, verbose_name="주문")
     payment_status = models.CharField(
         max_length=10,
         choices=PAYMENT_STATUS_CHOICES,

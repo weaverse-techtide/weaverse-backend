@@ -1,14 +1,15 @@
-from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, extend_schema_view
-import requests
 
-from .models import Cart, CartItem, Order, OrderItem, Payment, UserBillingAddress
+from drf_spectacular.utils import extend_schema, extend_schema_view
+
+from .models import Cart, CartItem, Order, Payment, UserBillingAddress
 from .serializers import (
     CartItemSerializer,
     CartSerializer,
@@ -17,6 +18,7 @@ from .serializers import (
     UserBillingAddressSerializer,
     PaymentSerializer,
 )
+from .services import KakaoPayService
 
 
 @extend_schema_view(
@@ -103,12 +105,12 @@ class CartView(generics.GenericAPIView):
 @extend_schema_view(
     get=extend_schema(
         summary="사용자의 주문 목록을 조회하는 API",
-        description="사용자의 모든 주문 목록을 조회합니다.",
+        description="사용자의 모든 주문 목록을 조회하거나 특정 주문을 조회합니다.",
         responses={200: OrderSerializer(many=True)},
     ),
     post=extend_schema(
         summary="새로운 주문을 생성하는 API",
-        description="장바구니 상품들을 주문으로 전환합니다. 혹은 새로운 주문을 바로 생성합니다.",
+        description="주문을 바로 생성합니다. 혹은 장바구니를 통해 주문을 생성합니다.",
         responses={201: OrderSerializer},
     ),
 )
@@ -118,7 +120,9 @@ class OrderView(generics.GenericAPIView):
 
     [GET /orders/]: 사용자의 모든 주문을 조회합니다.
     [GET /orders/{pk}/]: 특정 주문의 상세 정보를 조회합니다.
-    [POST /orders/]: 장바구니를 통해 주문을 생성합니다.
+    [POST /orders/]: 새로운 주문을 생성합니다.
+        - from_cart=True: 장바구니를 통해 주문을 생성합니다.
+        - from_cart=False: 직접 주문 항목을 지정하여 주문을 생성합니다.
     """
 
     serializer_class = OrderSerializer
@@ -137,6 +141,12 @@ class OrderView(generics.GenericAPIView):
         return Response(serializer.data)
 
     def post(self, request):
+        if request.data.get("from_cart", False):
+            return self._create_order_from_cart(request)
+
+        return self._create_new_order(request)
+
+    def _create_order_from_cart(self, request):
         cart = get_object_or_404(Cart, user=request.user)
         if not cart.cart_items.exists():
             return Response(
@@ -144,8 +154,15 @@ class OrderView(generics.GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if cart.total_price() > 50000:
+            return Response(
+                {"detail": "상품의 총 가격이 50,000원을 초과할 수 없습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         order_data = {
             "user": request.user.id,
+            "order_status": "pending",
             "order_items": [
                 {
                     "curriculum": item.curriculum.id if item.curriculum else None,
@@ -157,6 +174,21 @@ class OrderView(generics.GenericAPIView):
             ],
         }
 
+        return self._save_order(order_data, from_cart=True)
+
+    def _create_new_order(self, request):
+        order_data = request.data.copy()
+        if "order_items" not in order_data or not order_data["order_items"]:
+            return Response(
+                {"detail": "주문 항목이 없습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        order_data["user"] = request.user.id
+        order_data["order_status"] = "pending"
+        return self._save_order(order_data, from_cart=False)
+
+    def _save_order(self, order_data, from_cart=False):
         order_serializer = self.get_serializer(data=order_data)
         order_serializer.is_valid(raise_exception=True)
 
@@ -169,8 +201,10 @@ class OrderView(generics.GenericAPIView):
                 order_item_serializer.is_valid(raise_exception=True)
                 order_item_serializer.save()
 
-            # 주문이 완료되면 장바구니를 비웁니다.
-            cart.cart_items.all().delete()
+            if from_cart:
+                # 장바구니를 통한 주문 생성 시에만 장바구니를 비웁니다.
+                cart = Cart.objects.get(user=order.user)
+                cart.cart_items.all().delete()
 
         order_serializer = self.get_serializer(order)
         return Response(
@@ -288,7 +322,7 @@ class PaymentView(generics.GenericAPIView):
     """
     결제 관련 기능을 처리합니다.
 
-    [POST /payments/{order_id}/]: 결제를 생성하고 카카오페이 결제를 요청합니다.
+    [POST /payments/{order_id}/]: 특정 주문에 대한 결제를 생성하고 카카오페이 결제를 요청합니다.
     [GET /payments/{order_id}/]: 카카오페이 결제 결과를 처리합니다.
     [DELETE /payments/{order_id}/]: 결제를 취소하고 환불을 처리합니다.
     """
@@ -296,65 +330,50 @@ class PaymentView(generics.GenericAPIView):
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.kakao_pay_service = KakaoPayService()
+
     def get_queryset(self):
         return Payment.objects.filter(user=self.request.user)
 
+    def _validate_order(self, order):
+        if order.order_status != "pending":
+            raise ValidationError("결제 가능한 상태의 주문이 아닙니다.")
+        if order.total_price() > 50000:
+            raise ValidationError("결제 금액이 50,000원을 초과할 수 없습니다.")
+        if hasattr(order, "payment") and order.payment.payment_status == "completed":
+            raise ValidationError("이미 결제가 완료된 주문입니다.")
+
     @transaction.atomic
     def post(self, request, order_id):
-        order = get_object_or_404(Order, id=order_id, user=self.request.user)
+        order = get_object_or_404(Order, id=order_id, user=request.user)
 
-        if order.order_status != "pending":
-            return Response(
-                {"detail": "이미 처리된 주문입니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if order.total_price() > 50000:
-            return Response(
-                {"detail": "결제 금액이 50,000원을 초과할 수 없습니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if hasattr(order, "payment"):
-            return Response(
-                {"detail": "이미 해당 주문에 대한 결제가 존재합니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        # UserBillingAddress 연동 (내부 기록용)
-        billing_address_id = request.data.get("billing_address_id")
-        if billing_address_id:
-            billing_address = get_object_or_404(
-                UserBillingAddress,
-                id=billing_address_id,
-                user=request.user,
-                is_default=True,
-            )
-        else:
-            billing_address = None
-
-        # 카카오페이 API 요청 (청구 주소 정보 제외)
         try:
-            kakao_response = self.request_kakao_payment(order)
+            self._validate_order(order)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            kakao_response = self.kakao_pay_service.request_payment(order)
         except Exception as e:
             return Response(
-                {"detail": f"카카오페이 결제 요청 실패: {str(e)}"},
+                {
+                    "detail": "결제 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Payment 객체 생성 및 저장 (청구 주소 정보 포함, 내부 기록용)
-        payment = serializer.save(
+        payment = Payment.objects.create(
             order=order,
+            user=request.user,
             payment_status="pending",
             payment_method="kakaopay",
             amount=order.total_price(),
             transaction_id=kakao_response["tid"],
-            billing_address=billing_address,  # 내부 기록용
         )
 
+        serializer = self.get_serializer(payment)
         return Response(
             {
                 "payment": serializer.data,
@@ -365,125 +384,98 @@ class PaymentView(generics.GenericAPIView):
             status=status.HTTP_201_CREATED,
         )
 
-    def request_kakao_payment(self, order):
-        url = "https://open-api.kakaopay.com/online/v1/payment/ready"
-        headers = {
-            "Authorization": f"SECRET_KEY {settings.KAKAOPAY_SECRET_KEY}",
-            "Content-Type": "application/json",
-        }
-        base_url = settings.BASE_URL.strip("'").split("#")[0].strip()
-        payload = {
-            "cid": settings.KAKAOPAY_CID,
-            "partner_order_id": str(order.id),
-            "partner_user_id": str(order.user.id),
-            "item_name": f"Order #{order.id}",
-            "quantity": order.total_items(),
-            "total_amount": order.total_price(),
-            "tax_free_amount": 0,
-            "approval_url": f"{base_url}/api/payments/{order.id}/?result=success",
-            "cancel_url": f"{base_url}/api/payments/{order.id}/?result=cancel",
-            "fail_url": f"{base_url}/api/payments/{order.id}/?result=fail",
-        }
-
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code != 200:
-            error_message = (
-                f"카카오페이 API 응답: {response.status_code} - {response.text}"
-            )
-            print(error_message)
-            raise Exception(f"카카오페이 결제 요청 실패: {error_message}")
-
-        return response.json()
-
     @transaction.atomic
     def get(self, request, order_id):
-        order = get_object_or_404(Order, id=order_id, user=self.request.user)
+        order = get_object_or_404(Order, id=order_id, user=request.user)
         payment = get_object_or_404(Payment, order=order)
         result = request.GET.get("result")
+        pg_token = request.GET.get("pg_token")
 
         if result == "success":
-            return self.handle_success(request, order, payment)
+            return self._handle_success(request, order, payment, pg_token)
         elif result == "cancel":
-            return self.handle_cancel(order, payment)
+            return self._handle_cancel(order, payment)
         elif result == "fail":
-            return self.handle_fail(order, payment)
+            return self._handle_fail(order, payment)
         else:
             return Response(
-                {"detail": "Invalid result parameter"},
+                {"detail": "올바르지 않은 결제 결과입니다."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-    def handle_success(self, request, order, payment):
-        pg_token = request.GET.get("pg_token")
+    def _handle_success(self, request, order, payment, pg_token):
         if not pg_token:
             return Response(
-                {
-                    "detail": "결제 승인에 필요한 정보가 누락되었습니다. 다시 시도해 주세요."
-                },
+                {"detail": "결제 승인에 필요한 정보가 누락되었습니다."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
-            self.approve_kakao_payment(payment, pg_token)
+            self.kakao_pay_service.approve_payment(payment, pg_token)
         except Exception as e:
+            order.order_status = "failed"
+            order.save()
+            payment.payment_status = "failed"
+            payment.save()
             return Response(
-                {"detail": f"카카오페이 결제 승인 실패: {str(e)}"},
+                {
+                    "detail": "결제 승인 중 오류가 발생했습니다. 고객센터로 문의해 주세요."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        order.order_status = "completed"
-        order.save()
 
         payment.payment_status = "completed"
         payment.paid_at = timezone.now()
         payment.save()
+        order.order_status = "completed"
+        order.save()
 
-        # OrderItem의 expiry_date 설정 또는 갱신
+        # OrderItem의 expiry_date 설정
+        expiry_date = timezone.now() + timezone.timedelta(days=730)  # 2년
         for order_item in order.order_items.all():
+            order_item.expiry_date = expiry_date
             order_item.save()
 
         serializer = self.get_serializer(payment)
-        return Response(serializer.data)
+        return Response(
+            {"detail": "결제가 성공적으로 완료되었습니다.", "data": serializer.data},
+            status=status.HTTP_200_OK,
+        )
 
-    def approve_kakao_payment(self, payment, pg_token):
-        url = "https://open-api.kakaopay.com/online/v1/payment/approve"
-        headers = {
-            "Authorization": f"SECRET_KEY {settings.KAKAOPAY_SECRET_KEY}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "cid": settings.KAKAOPAY_CID,
-            "tid": payment.transaction_id,
-            "partner_order_id": str(payment.order.id),
-            "partner_user_id": str(payment.user.id),
-            "pg_token": pg_token,
-        }
-
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code != 200:
-            raise Exception("카카오페이 결제 승인 실패")
-
-    def handle_cancel(self, order, payment):
+    def _handle_cancel(self, order, payment):
         payment.payment_status = "cancelled"
+        payment.cancelled_at = timezone.now()
         payment.save()
         order.order_status = "cancelled"
         order.save()
 
         serializer = self.get_serializer(payment)
-        return Response(serializer.data)
+        return Response(
+            {
+                "detail": "결제 과정이 사용자에 의해 취소되었습니다.",
+                "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
-    def handle_fail(self, order, payment):
+    def _handle_fail(self, order, payment):
         payment.payment_status = "failed"
         payment.save()
         order.order_status = "failed"
         order.save()
 
         serializer = self.get_serializer(payment)
-        return Response(serializer.data)
+        return Response(
+            {
+                "detail": "결제 처리 중 오류가 발생했습니다. 다시 시도해 주세요.",
+                "data": serializer.data,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     @transaction.atomic
     def delete(self, request, order_id):
-        order = get_object_or_404(Order, id=order_id, user=self.request.user)
+        order = get_object_or_404(Order, id=order_id, user=request.user)
         payment = get_object_or_404(Payment, order=order)
 
         if payment.payment_status != "completed":
@@ -493,39 +485,28 @@ class PaymentView(generics.GenericAPIView):
             )
 
         try:
-            self.cancel_kakao_payment(payment)
+            self.kakao_pay_service.cancel_payment(payment)
         except Exception as e:
             return Response(
-                {"detail": f"카카오페이 결제 취소 실패: {str(e)}"},
+                {
+                    "detail": "결제 취소 중 오류가 발생했습니다. 고객센터로 문의해 주세요."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        order.order_status = "cancelled"
-        order.save()
 
         payment.payment_status = "cancelled"
         payment.cancelled_at = timezone.now()
         payment.save()
+        order.order_status = "cancelled"
+        order.save()
+
+        # OrderItem의 expiry_date 초기화
+        for order_item in order.order_items.all():
+            order_item.expiry_date = None
+            order_item.save()
 
         serializer = self.get_serializer(payment)
         return Response(serializer.data)
-
-    def cancel_kakao_payment(self, payment):
-        url = "https://open-api.kakaopay.com/online/v1/payment/cancel"
-        headers = {
-            "Authorization": f"SECRET_KEY {settings.KAKAOPAY_SECRET_KEY}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "cid": settings.KAKAOPAY_CID,
-            "tid": payment.transaction_id,
-            "cancel_amount": payment.amount,
-            "cancel_tax_free_amount": 0,
-        }
-
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code != 200:
-            raise Exception("카카오페이 결제 취소 실패")
 
 
 @extend_schema_view(

@@ -47,6 +47,7 @@ class Course(models.Model):
         Curriculum,
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         related_name="courses",
         verbose_name="커리큘럼",
     )
@@ -68,6 +69,11 @@ class Course(models.Model):
     price = models.PositiveIntegerField(verbose_name="가격")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="생성일")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
+
+    def get_thumbnail(self):
+        if hasattr(self, "images") and self.images.exists():
+            return self.images.first().file.url
+        return "https://www.gravatar.com/avatar/205e460b479e2e5b48aec077"
 
     def update(self, **kwargs):
         """

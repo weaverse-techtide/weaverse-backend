@@ -122,6 +122,9 @@ class CourseSummarySerializer(serializers.ModelSerializer):
     Course 모델을 위한 Serializer입니다
     """
 
+    lectures_count = serializers.SerializerMethodField()
+    thumbnail = serializers.SerializerMethodField()
+
     class Meta:
         model = Course
         fields = [
@@ -132,8 +135,22 @@ class CourseSummarySerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "course_level",
+            "lectures_count",
+            "thumbnail",
         ]
-        read_only_fields = ["created_at", "updated_at", "id"]
+        read_only_fields = [
+            "created_at",
+            "updated_at",
+            "id",
+            "lectures_count",
+            "thumbnail",
+        ]
+
+    def get_lectures_count(self, obj):
+        return obj.lectures.count()
+
+    def get_thumbnail(self, obj):
+        return obj.get_thumbnail()
 
 
 class CurriculumReadSerializer(serializers.ModelSerializer):

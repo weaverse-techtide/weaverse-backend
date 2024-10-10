@@ -45,7 +45,10 @@ class TestCustomUserAdmin:
     # When: ordering 속성을 확인하면
     # Then: 이메일로 정렬되어야 합니다.
     def test_관리자인터페이스_list_정렬_기준_확인(self, custom_user_admin):
-        assert custom_user_admin.ordering == ("email",)
+        assert custom_user_admin.ordering == (
+            "email",
+            "created_at",
+        )
 
     # Given: CustomUserAdmin이 설정되어 있을 때
     # When: add_fieldsets 속성을 확인하면

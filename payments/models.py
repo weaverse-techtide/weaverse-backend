@@ -105,6 +105,7 @@ class Order(models.Model):
         ("completed", "완료됨"),
         ("failed", "실패함"),
         ("cancelled", "취소됨"),
+        ("refunded", "환불됨"),
     ]
 
     user = models.ForeignKey(
@@ -254,6 +255,7 @@ class Payment(models.Model):
         ("completed", "완료됨"),
         ("failed", "실패함"),
         ("cancelled", "취소됨"),
+        ("refunded", "환불됨"),
     ]
 
     user = models.ForeignKey(

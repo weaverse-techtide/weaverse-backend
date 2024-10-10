@@ -1,5 +1,6 @@
 from accounts.models import CustomUser
 from courses.models import Course, Topic
+from PIL import Image as PILImage
 from rest_framework import serializers
 
 from .models import Image, Video, VideoEventData
@@ -28,6 +29,27 @@ class ImageSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "이 course에 이미지를 넣을 권한이 없습니다."
                 )
+        return value
+
+    def validate_file(self, value):
+        # 이미지 형식과 크기 유효성 검사
+        if not value.name.endswith((".png", ".jpg", ".jpeg")):
+            raise serializers.ValidationError("지원하지 않는 파일 형식입니다.")
+        if value.size > 5 * 1024 * 1024:  # 5MB 제한
+            raise serializers.ValidationError("파일 크기는 5MB를 초과할 수 없습니다.")
+
+        # 이미지 손상 여부 검사
+        try:
+            img = PILImage.open(value)
+            img.verify()
+        except Exception:
+            raise serializers.ValidationError("유효한 이미지 파일이 아닙니다.")
+
+        # 중복 파일명 검사
+        user = self.context["request"].user
+        if Image.objects.filter(user=user, file__exact=value.name).exists():
+            raise serializers.ValidationError("이미 존재하는 파일명입니다.")
+
         return value
 
 

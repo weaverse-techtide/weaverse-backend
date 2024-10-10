@@ -14,15 +14,19 @@ DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
 INSTALLED_APPS = [
+    # 기본 장고 앱
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # 써드 파티 앱
     "rest_framework",
-    "accounts",
     "drf_spectacular",
+    "corsheaders",
+    # 로컬 앱
+    "accounts",
     "jwtauth",
     "courses",
     "materials",
@@ -37,6 +41,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
 ]
 
 ROOT_URLCONF = "weaverse.urls"
@@ -85,6 +90,7 @@ DATABASES = {
         "PORT": os.getenv("DATABASE_PORT", ""),
     }
 }
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {

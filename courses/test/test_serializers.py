@@ -184,7 +184,7 @@ class TestCourseDetailSerializer:
 
 @pytest.mark.django_db
 class TestCourseSummarySerializer:
-    def test_course_직렬화(self, setup_course_data):
+    def test_course_summary_직렬화(self, setup_course_data):
         # Given
         course = setup_course_data["course"]
 
@@ -198,8 +198,9 @@ class TestCourseSummarySerializer:
         assert data["short_description"] == conftest.COURSE_SHORT_DESCRIPTION
         assert data["category"] == conftest.COURSE_CATEGORY
         assert data["course_level"] == conftest.COURSE_COURSE_LEVEL
+        assert data["lectures_count"] == 2
 
-    def test_course_역직렬화(self):
+    def test_course_summary_역직렬화(self):
         # Given
         data = {
             "title": "Test Course",

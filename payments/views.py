@@ -337,37 +337,17 @@ class PaymentView(generics.GenericAPIView):
             raise ValidationError("결제 가능한 상태의 주문이 아닙니다.")
         if order.get_total_price() > 50000:
             raise ValidationError("결제 금액이 50,000원을 초과할 수 없습니다.")
-        if order.payments.filter(payment_status="completed").exists():
-            raise ValidationError("이미 결제가 완료된 주문입니다.")
+        if order.payments.filter(payment_status__in=["completed", "pending"]).exists():
+            raise ValidationError("이미 결제가 완료되었거나 진행 중인 주문입니다.")
 
     @transaction.atomic
     def post(self, request, order_id):
-        order = get_object_or_404(Order, id=order_id, user=request.user)
+        order = Order.objects.select_for_update().get(id=order_id, user=request.user)
 
         try:
             self._validate_order(order)
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 이미 진행 중인 결제가 있는지 확인
-        existing_payment = Payment.objects.filter(
-            order=order, payment_status="pending"
-        ).first()
-        if existing_payment:
-            # 기존 결제 요청의 유효성 검사 (예: 15분 이내)
-            if timezone.now() - existing_payment.created_at < timezone.timedelta(
-                minutes=15
-            ):
-                return Response(
-                    {
-                        "detail": "이미 진행 중인 결제가 있습니다. 잠시 후 다시 시도해 주세요."
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            else:
-                # 오래된 pending 결제는 취소 처리
-                existing_payment.payment_status = "cancelled"
-                existing_payment.save()
 
         try:
             kakao_response = self.kakao_pay_service.request_payment(order)
@@ -411,13 +391,6 @@ class PaymentView(generics.GenericAPIView):
         if order.order_status != "pending":
             return Response(
                 {"detail": "이미 처리된 주문입니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # 중복 결제 확인
-        if hasattr(order, "payment") and order.payment.payment_status == "completed":
-            return Response(
-                {"detail": "이미 결제가 완료된 주문입니다."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

@@ -23,6 +23,16 @@ urlpatterns = [
     ),
     # 사용자 비디오 시청 기록 관련 URL
     path(
+        "video-event-data/",
+        views.VideoEventCreateView.as_view(),
+        name="video-event-data",
+    ),
+    path(
+        "video/<int:video_id/events",
+        views.VideoEventListView.as_view(),
+        name="video-event-list",
+    ),
+    path(
         "users/<int:user_id>/videos/<int:video_id>/watch-history/",
         views.WatchHistoryRetrieveUpdateView.as_view(),
         name="watch-history",

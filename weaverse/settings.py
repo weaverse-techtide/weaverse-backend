@@ -13,6 +13,11 @@ DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
+# 카카오페이 연동 설정
+BASE_URL = os.environ.get("BASE_URL")
+KAKAOPAY_CID = os.environ.get("KAKAOPAY_CID")
+KAKAOPAY_SECRET_KEY = os.environ.get("KAKAOPAY_SECRET_KEY")
+
 INSTALLED_APPS = [
     # 기본 장고 앱
     "django.contrib.admin",
@@ -31,9 +36,12 @@ INSTALLED_APPS = [
     "courses",
     "materials",
     "payments",
+    "corsheaders",
+    "django_filters",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -63,15 +71,13 @@ TEMPLATES = [
 ]
 
 REST_FRAMEWORK = {
+    "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
         "rest_framework.renderers.BrowsableAPIRenderer",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "jwtauth.authentication.JWTAuthentication",
-    ],
-    "DEFAULT_PARSER_CLASSES": [
-        "rest_framework.parsers.JSONParser",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
@@ -132,10 +138,13 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # CORS 설정
-CORS_ALLOWED_ORIGINS = [
-    "https://www.weaverse.site",  # 프로덕션 환경
-    "http://localhost:3000",  # 개발 환경 프론트엔드
-]
+if DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        "https://www.weaverse.site",  # 프로덕션 환경
+        "http://localhost:3000",  # 개발 환경 프론트엔드
+    ]
+else:
+    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -150,6 +159,18 @@ SPECTACULAR_SETTINGS = {
     "SERVE_URLCONF": "weaverse.urls",
     "EXTERNAL_DOCS": {"description": "Weaverse GitHub", "url": ""},
 }
+
+# S3 설정
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME")
+AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
+AWS_S3_OBJECT_PARAMETERS = {
+    "CacheControl": "max-age=86400",
+}
+
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
 # S3 설정
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")

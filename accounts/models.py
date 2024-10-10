@@ -73,11 +73,6 @@ class CustomUser(AbstractUser):
     phone_number = models.CharField(
         max_length=20, null=True, blank=True, verbose_name="연락처"
     )
-    profile_image = models.ImageField(
-        upload_to="profile_images/",
-        blank=True,
-        default="profile_images/default.jpg",
-    )
     introduction = models.TextField(
         max_length=20, null=True, blank=True, verbose_name="자기소개"
     )

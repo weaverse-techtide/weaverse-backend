@@ -28,7 +28,7 @@ urlpatterns = [
         name="video-event-data",
     ),
     path(
-        "video/<int:video_id/events",
+        "video/<int:video_id>/events",
         views.VideoEventListView.as_view(),
         name="video-event-list",
     ),

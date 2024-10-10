@@ -153,7 +153,7 @@ class TestCourseDetail:
         response = api_client.put(url, data, format="json")
 
         # Then
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
@@ -224,7 +224,7 @@ class TestCourseDetail:
         response = api_client.delete(url)
 
         # Then
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
@@ -340,7 +340,7 @@ class TestCourseList:
         response = api_client.post(url, data, format="json")
 
         # Then
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
@@ -429,7 +429,7 @@ class TestCurriculumList:
         response = api_client.post(url, data, format="json")
 
         # Then
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
@@ -558,7 +558,7 @@ class TestCurriculumDetail:
         response = api_client.put(url, data, format="json")
 
         # Then
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
@@ -612,7 +612,7 @@ class TestCurriculumDetail:
         response = api_client.delete(url)
 
         # Then
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }

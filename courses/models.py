@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -6,9 +7,44 @@ class Curriculum(models.Model):
     커리큘럼 모델입니다.
     """
 
+    category_choices = [
+        ("JavaScript", "JavaScript"),
+        ("Python", "Python"),
+        ("Django", "Django"),
+        ("React", "React"),
+        ("Vue", "Vue"),
+        ("Node", "Node"),
+        ("AWS", "AWS"),
+        ("Docker", "Docker"),
+        ("DB", "DB"),
+    ]
+    skill_level_choices = [
+        ("beginner", "초급"),
+        ("intermediate", "중급"),
+        ("advanced", "고급"),
+    ]
+
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="curriculums",
+        verbose_name="작성자",
+    )
     name = models.CharField(max_length=255, verbose_name="커리큘럼 이름")
     description = models.TextField(verbose_name="설명")
     price = models.PositiveIntegerField(verbose_name="가격")
+    category = models.CharField(
+        max_length=255,
+        verbose_name="카테고리",
+        choices=category_choices,
+        default="JavaScript",
+    )
+    skill_level = models.CharField(
+        max_length=255,
+        verbose_name="난이도",
+        choices=skill_level_choices,
+        default="beginner",
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="생성일")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
 
@@ -37,7 +73,7 @@ class Course(models.Model):
         ("Docker", "Docker"),
         ("DB", "DB"),
     ]
-    course_level_choices = [
+    skill_level_choices = [
         ("beginner", "초급"),
         ("intermediate", "중급"),
         ("advanced", "고급"),
@@ -51,6 +87,12 @@ class Course(models.Model):
         related_name="courses",
         verbose_name="커리큘럼",
     )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="courses",
+        verbose_name="작성자",
+    )
     title = models.CharField(max_length=255, verbose_name="코스 제목")
     short_description = models.TextField(verbose_name="간단한 설명")
     description = models.JSONField(verbose_name="설명")
@@ -60,10 +102,10 @@ class Course(models.Model):
         choices=category_choices,
         default="JavaScript",
     )
-    course_level = models.CharField(
+    skill_level = models.CharField(
         max_length=255,
         verbose_name="난이도",
-        choices=course_level_choices,
+        choices=skill_level_choices,
         default="beginner",
     )
     price = models.PositiveIntegerField(verbose_name="가격")
@@ -83,7 +125,7 @@ class Course(models.Model):
         - short_description: 간단한 설명
         - description: 설명
         - category: 카테고리
-        - course_level: 난이도
+        - skill_level: 난이도
         - price: 가격
         """
         for key, value in kwargs.items():
@@ -92,7 +134,7 @@ class Course(models.Model):
                 "short_description",
                 "description",
                 "category",
-                "course_level",
+                "skill_level",
                 "price",
             ]:
                 continue

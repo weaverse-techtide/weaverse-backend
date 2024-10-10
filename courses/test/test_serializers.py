@@ -36,7 +36,7 @@ class TestCourseDetailSerializer:
         assert data["short_description"] == conftest.COURSE_SHORT_DESCRIPTION
         assert data["description"] == conftest.COURSE_DESCRIPTION
         assert data["category"] == conftest.COURSE_CATEGORY
-        assert data["course_level"] == conftest.COURSE_COURSE_LEVEL
+        assert data["skill_level"] == conftest.COURSE_SKILL_LEVEL
         assert data["price"] == conftest.COURSE_PRICE
         assert len(data["lectures"]) == 2
         assert data["lectures"][0]["title"] == conftest.LECTURE1_TITLE
@@ -132,7 +132,7 @@ class TestCourseDetailSerializer:
             "short_description": "Test Course",
             "description": {},
             "category": "JavaScript",
-            "course_level": "beginner",
+            "skill_level": "beginner",
             "price": 10000,
             "lectures": [
                 {
@@ -197,7 +197,7 @@ class TestCourseSummarySerializer:
         assert data["title"] == conftest.COURSE_TITLE
         assert data["short_description"] == conftest.COURSE_SHORT_DESCRIPTION
         assert data["category"] == conftest.COURSE_CATEGORY
-        assert data["course_level"] == conftest.COURSE_COURSE_LEVEL
+        assert data["skill_level"] == conftest.COURSE_SKILL_LEVEL
         assert data["lectures_count"] == 2
 
     def test_course_summary_역직렬화(self):
@@ -206,7 +206,7 @@ class TestCourseSummarySerializer:
             "title": "Test Course",
             "short_description": "Test Course",
             "category": "JavaScript",
-            "course_level": "beginner",
+            "skill_level": "beginner",
         }
 
         # When
@@ -601,10 +601,13 @@ class TestCurriculumCreateAndUpdateSerializer:
 @pytest.mark.django_db
 class TestCurriculumReadSerializer:
 
-    def test_curriculum_직렬화(self, setup_course_data):
+    def test_curriculum_직렬화(self, setup_course_data, create_staff_user):
         # Given
         curriculum = Curriculum.objects.create(
-            name="Test Curriculum", description="Test Description", price=1000
+            name="Test Curriculum",
+            description="Test Description",
+            price=1000,
+            author=create_staff_user,
         )
         course = setup_course_data["course"]
         curriculum.courses.add(course)
@@ -623,10 +626,13 @@ class TestCurriculumReadSerializer:
 @pytest.mark.django_db
 class TestCurriculumSummarySerializer:
 
-    def test_curriculum_직렬화(self):
+    def test_curriculum_summary_직렬화(self, create_staff_user):
         # Given
         curriculum = Curriculum.objects.create(
-            name="Test Curriculum", description="Test Description", price=1000
+            name="Test Curriculum",
+            description="Test Description",
+            price=1000,
+            author=create_staff_user,
         )
 
         # When

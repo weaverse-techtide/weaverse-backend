@@ -17,7 +17,7 @@ COURSE_TITLE = "Test Course"
 COURSE_SHORT_DESCRIPTION = "Test Course"
 COURSE_DESCRIPTION = {}
 COURSE_CATEGORY = "JavaScript"
-COURSE_COURSE_LEVEL = "beginner"
+COURSE_SKILL_LEVEL = "beginner"
 COURSE_PRICE = 10000
 LECTURE1_TITLE = "Test Lecture 1"
 LECTURE1_ORDER = 1
@@ -46,17 +46,18 @@ TEST_STAFF_USER_PASSWORD = "staffpass"
 
 
 @pytest.fixture
-def setup_course_data():
+def setup_course_data(create_staff_user):
     """
     테스트에서 사용할 Course, Lecture, Topic, Assignment, MultipleChoiceQuestion, MultipleChoiceQuestionChoice 인스턴스를 생성합니다.
     """
 
     course = Course.objects.create(
         title=COURSE_TITLE,
+        author=create_staff_user,
         short_description=COURSE_SHORT_DESCRIPTION,
         description=COURSE_DESCRIPTION,
         category=COURSE_CATEGORY,
-        course_level=COURSE_COURSE_LEVEL,
+        skill_level=COURSE_SKILL_LEVEL,
         price=COURSE_PRICE,
     )
     lecture1 = Lecture.objects.create(

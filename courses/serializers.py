@@ -111,7 +111,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "lectures",
-            "course_level",
+            "skill_level",
             "price",
         ]
         read_only_fields = ["created_at", "updated_at", "id"]
@@ -124,6 +124,8 @@ class CourseSummarySerializer(serializers.ModelSerializer):
 
     lectures_count = serializers.SerializerMethodField()
     thumbnail = serializers.SerializerMethodField()
+    author_image = serializers.SerializerMethodField()
+    author_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
@@ -134,9 +136,11 @@ class CourseSummarySerializer(serializers.ModelSerializer):
             "category",
             "created_at",
             "updated_at",
-            "course_level",
+            "skill_level",
             "lectures_count",
             "thumbnail",
+            "author_image",
+            "author_name",
         ]
         read_only_fields = [
             "created_at",
@@ -144,6 +148,8 @@ class CourseSummarySerializer(serializers.ModelSerializer):
             "id",
             "lectures_count",
             "thumbnail",
+            "author_image",
+            "author_name",
         ]
 
     def get_lectures_count(self, obj):
@@ -151,6 +157,12 @@ class CourseSummarySerializer(serializers.ModelSerializer):
 
     def get_thumbnail(self, obj):
         return obj.get_thumbnail()
+
+    def get_author_image(self, obj):
+        return "https://paullab.co.kr/images/weniv-licat.png"
+
+    def get_author_name(self, obj):
+        return obj.author.nickname
 
 
 class CurriculumReadSerializer(serializers.ModelSerializer):
@@ -196,6 +208,10 @@ class CurriculumSummarySerializer(serializers.ModelSerializer):
     Curriculum 모델을 위한 Serializer입니다. 직렬화 할 때만 사용합니다.
     """
 
+    author_image = serializers.SerializerMethodField()
+    author_name = serializers.SerializerMethodField()
+    courses_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Curriculum
         fields = [
@@ -204,5 +220,30 @@ class CurriculumSummarySerializer(serializers.ModelSerializer):
             "price",
             "created_at",
             "updated_at",
+            "author_image",
+            "author_name",
+            "category",
+            "skill_level",
+            "description",
+            "courses_count",
         ]
-        read_only_fields = ["created_at", "updated_at", "id"]
+        read_only_fields = [
+            "created_at",
+            "updated_at",
+            "id",
+            "author_image",
+            "author_name",
+            "category",
+            "skill_level",
+            "description",
+            "courses_count",
+        ]
+
+    def get_author_image(self, obj):
+        return "https://paullab.co.kr/images/weniv-licat.png"
+
+    def get_author_name(self, obj):
+        return obj.author.nickname
+
+    def get_courses_count(self, obj):
+        return obj.courses.count()

@@ -123,7 +123,7 @@ class CourseListCreateView(CourseMixin, generics.ListCreateAPIView):
         filters.OrderingFilter,
     ]
     search_fields = ["title", "short_description", "description"]
-    filterset_fields = ["category", "course_level"]
+    filterset_fields = ["category", "skill_level"]
     ordering_fields = ["created_at", "price"]
 
     def get_serializer_class(self):
@@ -143,9 +143,10 @@ class CourseListCreateView(CourseMixin, generics.ListCreateAPIView):
         """
         course 및 하위 모델 lecture, topic, assignment, quiz 등을 함께 생성합니다.
         """
+        author = self.request.user if self.request.user.is_staff else None
 
         self.create_course_with_lectures_and_topics(
-            serializer.data, serializer.data.get("lectures", [])
+            serializer.data, serializer.data.get("lectures", []), author
         )
 
 
@@ -196,10 +197,12 @@ class CurriculumListCreateView(generics.ListCreateAPIView):
         """
         curriculum을 생성합니다.
         """
+        author = self.request.user if self.request.user.is_staff else None
         curriculum = Curriculum.objects.create(
             name=serializer.data.get("name"),
             description=serializer.data.get("description"),
             price=serializer.data.get("price"),
+            author=author,
         )
         courses_ids = serializer.data.get("courses_ids", [])
         Course.objects.filter(id__in=courses_ids).update(curriculum=curriculum)

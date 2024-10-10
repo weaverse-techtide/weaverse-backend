@@ -18,9 +18,7 @@ class CustomUserManager(UserManager):
             raise ValueError("닉네임은 필수로 입력하셔야 합니다.")
         email = self.normalize_email(email)
         user = self.model(email=email, nickname=nickname, **extra_fields)
-        user.set_password(  # 모델 인스턴스 메서드 (vs. 유틸리티 함수 make_password)
-            password
-        )  # make_password하고 추가 로직 실행(비밀번호 변경시 마지막 로그인 시간 초기화)
+        user.set_password(password)
         user.save(using=self._db)
         return user
 

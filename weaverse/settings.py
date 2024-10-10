@@ -19,20 +19,24 @@ KAKAOPAY_CID = os.environ.get("KAKAOPAY_CID")
 KAKAOPAY_SECRET_KEY = os.environ.get("KAKAOPAY_SECRET_KEY")
 
 INSTALLED_APPS = [
+    # 기본 장고 앱
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # 써드 파티 앱
     "rest_framework",
-    "accounts",
     "drf_spectacular",
+    "corsheaders",
+    "storages",
+    # 로컬 앱
+    "accounts",
     "jwtauth",
     "courses",
     "materials",
     "payments",
-    "corsheaders",
     "django_filters",
 ]
 
@@ -45,6 +49,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
 ]
 
 ROOT_URLCONF = "weaverse.urls"
@@ -92,6 +97,7 @@ DATABASES = {
     }
 }
 
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -115,6 +121,8 @@ USE_I18N = True
 
 USE_TZ = True
 
+
+# 정적 파일 설정
 STATIC_URL = "static/"
 STATIC_ROOT = os.getenv("STATIC_ROOT", BASE_DIR / "static")
 
@@ -124,9 +132,19 @@ if STATICFILES_DIRS:
 else:
     STATICFILES_DIRS = [BASE_DIR / "staticfiles"]
 
+# CSRF 설정
 CSRF_TRUSTED_ORIGINS = [
     "https://www.weaverse.site",
 ]
+
+# CORS 설정
+if DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        "https://www.weaverse.site",  # 프로덕션 환경
+        "http://localhost:3000",  # 개발 환경 프론트엔드
+    ]
+else:
+    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -142,13 +160,6 @@ SPECTACULAR_SETTINGS = {
     "EXTERNAL_DOCS": {"description": "Weaverse GitHub", "url": ""},
 }
 
-if DEBUG:
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:3000",
-    ]
-else:
-    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
-
 # S3 설정
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
@@ -160,3 +171,19 @@ AWS_S3_OBJECT_PARAMETERS = {
 }
 
 DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+# S3 설정
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME")
+AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
+AWS_S3_OBJECT_PARAMETERS = {
+    "CacheControl": "max-age=86400",
+}
+
+# boto3 설정
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+# 미디어 파일 설정
+MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"

@@ -196,6 +196,20 @@ class CustomUserDetailSerializer(serializers.ModelSerializer):
             return CustomUser.objects.filter(is_staff=True, is_superuser=False).count()
         return None
 
+    def validate_nickname(self, value):
+        """
+        닉네임 필드의 데이터를 검증합니다.
+        """
+        if (
+            CustomUser.objects.filter(nickname=value)
+            .exclude(id=self.instance.id if self.instance else None)
+            .exists()
+        ):
+            raise serializers.ValidationError(
+                {"nickname": "사용할 수 없는 닉네임입니다."}
+            )
+        return value
+
     def validate_email(self, value):
         """
         이메일 필드의 데이터를 검증합니다.

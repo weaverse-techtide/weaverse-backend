@@ -1,6 +1,8 @@
 from django.db import transaction
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from rest_framework import generics
+from rest_framework import filters, generics
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from .mixins import CourseMixin
@@ -13,6 +15,12 @@ from .serializers import (
     CurriculumReadSerializer,
     CurriculumSummarySerializer,
 )
+
+
+class CourseResultsSetPagination(PageNumberPagination):
+    page_size = 9
+    page_size_query_param = None
+    max_page_size = 9
 
 
 @extend_schema_view(
@@ -108,6 +116,15 @@ class CourseListCreateView(CourseMixin, generics.ListCreateAPIView):
 
     queryset = Course.objects.all()
     permission_classes = [IsStaffOrReadOnly]
+    pagination_class = CourseResultsSetPagination
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    search_fields = ["title", "short_description", "description"]
+    filterset_fields = ["category", "course_level"]
+    ordering_fields = ["created_at", "price"]
 
     def get_serializer_class(self):
         """

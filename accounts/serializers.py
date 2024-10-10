@@ -1,4 +1,6 @@
 from django.contrib.auth.hashers import check_password
+from materials.models import Image
+from materials.serializers import ImageSerializer
 from rest_framework import serializers
 
 from .models import CustomUser
@@ -127,14 +129,33 @@ class CustomUserDetailSerializer(serializers.ModelSerializer):
     student_count = serializers.SerializerMethodField()
     tutor_count = serializers.SerializerMethodField()
 
+    profile_image = ImageSerializer(required=False)
+
     class Meta:
         model = CustomUser
-        fields = "__all__"
+        fields = [
+            "id",
+            "email",
+            "nickname",
+            "password",
+            "confirm_password",
+            "profile_image",
+            "is_active",
+            "is_staff",
+            "is_superuser",
+            "students",
+            "user_type",
+            "student_count",
+            "tutor_count",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = [
             "id",
             "is_active",
             "is_staff",
-            "tutor",
+            "is_superuser",
+            "students",
             "user_type",
             "student_count",
             "tutor_count",
@@ -209,6 +230,20 @@ class CustomUserDetailSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def validate_nickname(self, value):
+        """
+        닉네임 필드의 데이터를 검증합니다.
+        """
+        if (
+            CustomUser.objects.filter(nickname=value)
+            .exclude(id=self.instance.id if self.instance else None)
+            .exists()
+        ):
+            raise serializers.ValidationError(
+                {"nickname": "이미 존재하는 닉네임입니다."}
+            )
+        return value
+
     def validate(self, data):
         """
         전체 필드에 대한 데이터를 검증합니다.
@@ -239,7 +274,12 @@ class CustomUserDetailSerializer(serializers.ModelSerializer):
         try:
             password = validated_data.pop("password", None)
             validated_data.pop("confirm_password")
+            profile_image = validated_data.pop("profile_image", None)
+
             user = CustomUser.objects.create_user(password=password, **validated_data)
+
+            if profile_image:
+                Image.objects.create(user=user, **profile_image)
             return user
         except Exception as e:
             raise serializers.ValidationError("사용자 생성 중 오류가 발생했습니다.")
@@ -252,11 +292,23 @@ class CustomUserDetailSerializer(serializers.ModelSerializer):
             password = validated_data.pop("password", None)
             validated_data.pop("confirm_password", None)
 
+            profile_image = validated_data.pop("profile_image", None)
+
             user = super().update(instance, validated_data)
 
+            # 업데이트에 비밀번호가 있는 경우
             if password:
                 user.set_password(password)
                 user.save()
+            
+            # 업데이트에 프로필 이미지가 있는 경우
+            if profile_image:
+                if hasattr(user, 'image'):
+                    for attr, value in profile_image.items():
+                        setattr(user.image, attr, value)
+                    user.image.save() 
+                else:
+                    Image.objects.create(user=user, **profile_image)
             return user
         except Exception as e:
             raise serializers.ValidationError("사용자 업데이트 중 오류가 발생했습니다.")

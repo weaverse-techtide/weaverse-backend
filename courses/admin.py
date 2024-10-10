@@ -11,9 +11,9 @@ from .models import (
 )
 
 if settings.DEBUG:
-    admin.register(Course)
-    admin.register(Lecture)
-    admin.register(Topic)
-    admin.register(Assignment)
-    admin.register(MultipleChoiceQuestion)
-    admin.register(MultipleChoiceQuestionChoice)
+    admin.site.register(Course)
+    admin.site.register(Lecture)
+    admin.site.register(Topic)
+    admin.site.register(Assignment)
+    admin.site.register(MultipleChoiceQuestion)
+    admin.site.register(MultipleChoiceQuestionChoice)

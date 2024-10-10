@@ -1,10 +1,22 @@
+from accounts.models import CustomUser
 from courses.models import Course, Topic
 from django.db import models
 
 
 class Image(models.Model):
     course = models.OneToOneField(
-        Course, on_delete=models.CASCADE, related_name="image"
+        Course,
+        on_delete=models.CASCADE,
+        related_name="image",
+        null=True,
+        blank=True,
+    )
+    user = models.OneToOneField(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name="image",
+        null=True,
+        blank=True,
     )
     title = models.CharField(max_length=255, verbose_name="이미지 제목")
     file = models.ImageField(upload_to="images/", verbose_name="이미지 파일")
@@ -13,6 +25,17 @@ class Image(models.Model):
 
     def __str__(self):
         return f"{self.topic.title} - {self.title}"
+
+    # 실제 이미지 파일
+    image = models.ImageField(upload_to="images/", blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+
+        if self.user and not self.file:
+            self.file = "images/default_user_image.jpg"
+        if self.course and not self.file:
+            self.file = "images/default_course_image.jpg"
+        super().save(*args, **kwargs)
 
 
 class Video(models.Model):

@@ -129,12 +129,28 @@ class CustomUserDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = "__all__"
+        fields = [
+            "id",
+            "email",
+            "nickname",
+            "password",
+            "confirm_password",
+            "is_active",
+            "is_staff",
+            "is_superuser",
+            "students",
+            "user_type",
+            "student_count",
+            "tutor_count",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = [
             "id",
             "is_active",
             "is_staff",
-            "tutor",
+            "is_superuser",
+            "students",
             "user_type",
             "student_count",
             "tutor_count",
@@ -206,6 +222,20 @@ class CustomUserDetailSerializer(serializers.ModelSerializer):
         if not any(char in r"!@#$%^&*()-_=+[{]}\|;:'\",<.>/?`~" for char in value):
             raise serializers.ValidationError(
                 {"password": "1개 이상의 특수 문자를 포함해야 합니다."}
+            )
+        return value
+
+    def validate_nickname(self, value):
+        """
+        닉네임 필드의 데이터를 검증합니다.
+        """
+        if (
+            CustomUser.objects.filter(nickname=value)
+            .exclude(id=self.instance.id if self.instance else None)
+            .exists()
+        ):
+            raise serializers.ValidationError(
+                {"nickname": "이미 존재하는 닉네임입니다."}
             )
         return value
 

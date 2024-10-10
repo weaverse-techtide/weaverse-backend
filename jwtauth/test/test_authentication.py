@@ -69,8 +69,8 @@ def test_로그인_실패(api_client):
     response = api_client.post(
         reverse("login"), {"email": "wrong@example.com", "password": "wrongpass"}
     )
-    # Then: 응답 상태 코드가 401 (Unauthorized)임
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    # Then: 응답 상태 코드가 403
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db

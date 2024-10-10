@@ -19,34 +19,7 @@ from .serializers import (
     WatchHistorySerializer,
 )
 
-
-def get_s3_client():
-    return boto3.client(
-        "s3",
-        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        region_name=settings.AWS_S3_REGION_NAME,
-    )
-
-
-def upload_file_to_s3(file, folder):
-    s3_client = get_s3_client()
-    file_name = f"{folder}/{file.name}"
-    try:
-        s3_client.upload_fileobj(
-            file,
-            settings.AWS_STORAGE_BUCKET_NAME,
-            file_name,
-            ExtraArgs={"ContentType": file.content_type},
-        )
-        return f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{file_name}"
-    except ClientError as e:
-        raise e
-
-
-def check_user_permission(user, obj):
-    if not user.is_staff and obj.course.tutor != user:
-        raise PermissionDenied("접근 권한이 없습니다.")
+# 리팩토링할 때 중복 함수 이곳에 작성
 
 
 class ImageCreateView(generics.CreateAPIView):
@@ -59,6 +32,8 @@ class ImageCreateView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+
+        # 시리얼라이저에서 유효성 검사 수행
         if serializer.is_valid():
             file = request.FILES.get("file")
             if not file:
@@ -66,16 +41,6 @@ class ImageCreateView(generics.CreateAPIView):
                     {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # 이미지 파일 검증
-            try:
-                img = PILImage.open(file)
-                img.verify()
-            except:
-                return Response(
-                    {"error": "Invalid image file"}, status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # S3 클라이언트 설정
             s3_client = boto3.client(
                 "s3",
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,

@@ -18,8 +18,9 @@ class CartItemSerializer(serializers.ModelSerializer):
             "quantity",
             "created_at",
             "updated_at",
-            "item_name",
-            "price",
+            "get_item_name",
+            "get_price",
+            "get_image_url",
         ]
         read_only_fields = [
             "id",
@@ -57,8 +58,8 @@ class CartSerializer(serializers.ModelSerializer):
             "id",
             "user",
             "cart_items",
-            "total_items",
-            "total_price",
+            "get_total_items",
+            "get_total_price",
             "created_at",
             "updated_at",
         ]
@@ -85,8 +86,9 @@ class OrderItemSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "expiry_date",
-            "item_name",
-            "price",
+            "get_item_name",
+            "get_price",
+            "get_image_url",
         ]
         read_only_fields = [
             "id",
@@ -126,8 +128,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "order_status",
             "created_at",
             "updated_at",
-            "total_items",
-            "total_price",
+            "get_total_items",
+            "get_total_price",
         ]
         read_only_fields = [
             "id",

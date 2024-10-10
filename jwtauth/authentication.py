@@ -1,10 +1,11 @@
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from django.contrib.auth import get_user_model
-import jwt
+import jwt, logging
 from django.conf import settings
 
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
@@ -25,19 +26,25 @@ class JWTAuthentication(BaseAuthentication):
                 access_token, settings.SECRET_KEY, algorithms=["HS256"]
             )
 
-            user_id = payload.get("user_id")
-            user = User.objects.get(id=user_id)
+            user = User(
+                id=payload["user_id"],
+                email=payload.get("email"),
+                is_staff=payload.get("is_staff"),
+                is_superuser=payload.get("is_superuser"),
+            )
+            user.is_authenticated = True
 
             return (user, None)
 
-        except jwt.ExpiredSignatureError:
+        except jwt.ExpiredSignatureError: 
             raise AuthenticationFailed("토큰이 만료되었습니다!")
-        except IndexError:
+        except IndexError: 
+            raise AuthenticationFailed("토큰이 없습니다!")
+        except jwt.DecodeError: 
             raise AuthenticationFailed("토큰이 유효하지 않습니다!")
-        except jwt.DecodeError:
-            raise AuthenticationFailed("토큰 디코딩 오류!")
-        except Exception as e:
-            raise AuthenticationFailed(f"인증 오류: {str(e)}")
+        except Exception as e: #
+            logger.error(f"인증 오류: {str(e)}")
+            raise AuthenticationFailed(f"인증이 유효하지 않습니다!")
 
     def authenticate_header(self, request):
         return "Bearer"

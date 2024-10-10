@@ -10,6 +10,7 @@ from courses.models import (
     MultipleChoiceQuestionChoice,
     Topic,
 )
+from jwtauth.utils.token_generator import generate_access_token
 
 # 테스트에서 사용할 상수를 정의합니다.
 COURSE_TITLE = "Test Course"
@@ -132,11 +133,26 @@ def api_client():
 
 @pytest.fixture(autouse=True)
 def create_user():
-    return User.objects.create_user(email=TEST_USER_EMAIL, password=TEST_USER_PASSWORD)
+    return User.objects.create_user(
+        email=TEST_USER_EMAIL, password=TEST_USER_PASSWORD, nickname="testuser"
+    )
 
 
 @pytest.fixture(autouse=True)
 def create_staff_user():
     return User.objects.create_user(
-        email=TEST_STAFF_USER_EMAIL, password=TEST_STAFF_USER_PASSWORD, is_staff=True
+        email=TEST_STAFF_USER_EMAIL,
+        password=TEST_STAFF_USER_PASSWORD,
+        is_staff=True,
+        nickname="staffuser",
     )
+
+
+@pytest.fixture()
+def user_token(create_user):
+    return generate_access_token(create_user)
+
+
+@pytest.fixture()
+def staff_user_token(create_staff_user):
+    return generate_access_token(create_staff_user)

@@ -2,6 +2,10 @@ from django.db import models
 
 
 class Curriculum(models.Model):
+    """
+    커리큘럼 모델입니다.
+    """
+
     name = models.CharField(max_length=255, verbose_name="커리큘럼 이름")
     description = models.TextField(verbose_name="설명")
     price = models.PositiveIntegerField(verbose_name="가격")
@@ -18,13 +22,17 @@ class Curriculum(models.Model):
 
 
 class Course(models.Model):
+    """
+    코스 모델입니다.
+    """
+
     category_choices = [
         ("JavaScript", "JavaScript"),
         ("Python", "Python"),
         ("Django", "Django"),
         ("React", "React"),
-        ("Vue.js", "Vue.js"),
-        ("Node.js", "Node.js"),
+        ("Vue", "Vue"),
+        ("Node", "Node"),
         ("AWS", "AWS"),
         ("Docker", "Docker"),
         ("DB", "DB"),
@@ -39,6 +47,7 @@ class Course(models.Model):
         Curriculum,
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         related_name="courses",
         verbose_name="커리큘럼",
     )
@@ -61,7 +70,22 @@ class Course(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="생성일")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
 
+    def get_thumbnail(self):
+        if hasattr(self, "images") and self.images.exists():
+            return self.images.first().file.url
+        return "https://www.gravatar.com/avatar/205e460b479e2e5b48aec077"
+
     def update(self, **kwargs):
+        """
+        코스 정보를 수정합니다.
+        수정 가능한 필드:
+        - title: 코스 제목
+        - short_description: 간단한 설명
+        - description: 설명
+        - category: 카테고리
+        - course_level: 난이도
+        - price: 가격
+        """
         for key, value in kwargs.items():
             if key not in [
                 "title",
@@ -85,6 +109,10 @@ class Course(models.Model):
 
 
 class Lecture(models.Model):
+    """
+    강의 모델입니다.
+    """
+
     course = models.ForeignKey(
         Course, on_delete=models.CASCADE, related_name="lectures", verbose_name="코스"
     )
@@ -103,6 +131,10 @@ class Lecture(models.Model):
 
 
 class Topic(models.Model):
+    """
+    주제 모델입니다.
+    """
+
     topic_type_choices = [
         ("video", "동영상"),
         ("article", "글"),
@@ -136,6 +168,10 @@ class Topic(models.Model):
 
 
 class MultipleChoiceQuestion(models.Model):
+    """
+    객관식 문제 모델입니다.
+    """
+
     topic = models.OneToOneField(
         Topic,
         on_delete=models.CASCADE,
@@ -155,6 +191,10 @@ class MultipleChoiceQuestion(models.Model):
 
 
 class MultipleChoiceQuestionChoice(models.Model):
+    """
+    객관식 문제 선택지 모델입니다.
+    """
+
     question = models.ForeignKey(
         MultipleChoiceQuestion,
         on_delete=models.CASCADE,
@@ -171,6 +211,10 @@ class MultipleChoiceQuestionChoice(models.Model):
 
 
 class Assignment(models.Model):
+    """
+    과제 모델입니다.
+    """
+
     topic = models.OneToOneField(
         Topic, on_delete=models.CASCADE, related_name="assignment", verbose_name="주제"
     )

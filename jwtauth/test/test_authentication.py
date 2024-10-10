@@ -1,12 +1,14 @@
-import pytest
-from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
-from rest_framework import status
-from django.utils import timezone
-from django.urls import reverse
 from datetime import timedelta
+
 import jwt
+import pytest
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.urls import reverse
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.test import APIClient
+
 from jwtauth.models import BlacklistedToken
 from jwtauth.utils.token_generator import generate_access_token, generate_refresh_token
 
@@ -28,7 +30,9 @@ def user(db):
     """
     테스트용 유저를 생성하여 반환합니다.
     """
-    return User.objects.create_user(email="test@example.com", password="testpass123")
+    return User.objects.create_user(
+        email="test@example.com", password="testpass123", nickname="testuser"
+    )
 
 
 @pytest.fixture

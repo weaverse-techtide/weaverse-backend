@@ -170,6 +170,14 @@ class CurriculumListCreateView(generics.ListCreateAPIView):
     queryset = Curriculum.objects.all()
     serializer_class = CurriculumSummarySerializer
     permission_classes = [IsStaffOrReadOnly]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    search_fields = ["title", "description"]
+    filterset_fields = ["category", "skill_level"]
+    ordering_fields = ["created_at", "price"]
 
     def get_serializer_class(self):
         """

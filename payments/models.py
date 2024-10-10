@@ -16,11 +16,11 @@ class Cart(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="생성일")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
 
-    def total_items(self):
+    def get_total_items(self):
         return sum(item.quantity for item in self.cart_items.all())
 
-    def total_price(self):
-        return sum(item.price() for item in self.cart_items.all())
+    def get_total_price(self):
+        return sum(item.get_price() for item in self.cart_items.all())
 
     class Meta:
         verbose_name = "장바구니"
@@ -54,19 +54,28 @@ class CartItem(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="생성일")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
 
-    def item_name(self):
-        return (
-            self.curriculum.name
-            if self.curriculum
-            else self.course.title if self.course else "상품"
-        )
+    def get_item_name(self):
+        if self.curriculum:
+            return self.curriculum.name
+        elif self.course:
+            return self.course.title
+        else:
+            return "알 수 없는 상품"
 
-    def price(self):
-        return (
-            self.curriculum.price
-            if self.curriculum
-            else self.course.price if self.course else 0
-        )
+    def get_price(self):
+        unit_price = 0
+        if self.curriculum:
+            unit_price = self.curriculum.price
+        elif self.course:
+            unit_price = self.course.price
+        return unit_price * self.quantity
+
+    def get_image_url(self):
+        if self.curriculum and hasattr(self.curriculum, "images"):
+            return self.curriculum.images.url
+        elif self.course and hasattr(self.course, "images"):
+            return self.course.images.url
+        return None
 
     class Meta:
         ordering = ["-created_at"]
@@ -74,7 +83,16 @@ class CartItem(models.Model):
         verbose_name_plural = "장바구니 상품들"
 
     def __str__(self):
-        return f"{self.cart.user.nickname}의 장바구니에 있는 {self.item_name}"
+        try:
+            user_nickname = self.cart.user.nickname
+            item_name = (
+                self.curriculum.name
+                if self.curriculum
+                else self.course.title if self.course else "알 수 없는 상품"
+            )
+            return f"{user_nickname}의 장바구니에 있는 {item_name}"
+        except Exception as e:
+            return f"장바구니 상품 (ID: {self.id})"
 
 
 class Order(models.Model):
@@ -87,6 +105,7 @@ class Order(models.Model):
         ("completed", "완료됨"),
         ("failed", "실패함"),
         ("cancelled", "취소됨"),
+        ("refunded", "환불됨"),
     ]
 
     user = models.ForeignKey(
@@ -101,11 +120,11 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="생성일")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
 
-    def total_items(self):
+    def get_total_items(self):
         return sum(item.quantity for item in self.order_items.all())
 
-    def total_price(self):
-        return sum(item.price() for item in self.order_items.all())
+    def get_total_price(self):
+        return sum(item.get_price() for item in self.order_items.all())
 
     class Meta:
         ordering = ["-created_at"]
@@ -113,7 +132,7 @@ class Order(models.Model):
         verbose_name_plural = "주문들"
 
     def __str__(self):
-        return f"{self.user.nickname}의 주문 ({self.get_order_status_display()})"
+        return f"{self.user.nickname}의 주문"
 
 
 class OrderItem(models.Model):
@@ -143,19 +162,28 @@ class OrderItem(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
     expiry_date = models.DateTimeField(null=True, blank=True, verbose_name="만료일")
 
-    def item_name(self):
-        return (
-            self.curriculum.name
-            if self.curriculum
-            else self.course.title if self.course else "상품"
-        )
+    def get_item_name(self):
+        if self.curriculum:
+            return self.curriculum.name
+        elif self.course:
+            return self.course.title
+        else:
+            return "알 수 없는 상품"
 
-    def price(self):
-        return (
-            self.curriculum.price
-            if self.curriculum
-            else self.course.price if self.course else 0
-        )
+    def get_price(self):
+        unit_price = 0
+        if self.curriculum:
+            unit_price = self.curriculum.price
+        elif self.course:
+            unit_price = self.course.price
+        return unit_price * self.quantity
+
+    def get_image_url(self):
+        if self.curriculum and hasattr(self.curriculum, "images"):
+            return self.curriculum.images.url
+        elif self.course and hasattr(self.course, "images"):
+            return self.course.images.url
+        return None
 
     def save(self, *args, **kwargs):
         if self.order.order_status == "completed" and (
@@ -170,7 +198,16 @@ class OrderItem(models.Model):
         verbose_name_plural = "주문 상품들"
 
     def __str__(self):
-        return f"{self.order.user.nickname}의 주문에 있는 {self.item_name}"
+        try:
+            user_nickname = self.order.user.nickname
+            item_name = (
+                self.curriculum.name
+                if self.curriculum
+                else self.course.title if self.course else "알 수 없는 상품"
+            )
+            return f"{user_nickname}의 주문에 있는 {item_name}"
+        except Exception as e:
+            return f"주문 상품 (ID: {self.id})"
 
 
 class UserBillingAddress(models.Model):
@@ -218,12 +255,18 @@ class Payment(models.Model):
         ("completed", "완료됨"),
         ("failed", "실패함"),
         ("cancelled", "취소됨"),
+        ("refunded", "환불됨"),
     ]
 
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="사용자"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="payments",
+        verbose_name="사용자",
     )
-    order = models.OneToOneField(Order, on_delete=models.CASCADE, verbose_name="주문")
+    order = models.ForeignKey(
+        Order, on_delete=models.CASCADE, related_name="payments", verbose_name="주문"
+    )
     payment_status = models.CharField(
         max_length=10,
         choices=PAYMENT_STATUS_CHOICES,
@@ -241,7 +284,7 @@ class Payment(models.Model):
     paid_at = models.DateTimeField(null=True, blank=True, verbose_name="결제 일시")
     cancelled_at = models.DateTimeField(null=True, blank=True, verbose_name="취소 일시")
     fail_reason = models.TextField(verbose_name="실패 사유", blank=True, null=True)
-    billing_address = models.OneToOneField(
+    billing_address = models.ForeignKey(
         UserBillingAddress,
         on_delete=models.SET_NULL,
         null=True,

@@ -142,8 +142,8 @@ def test_JWT_인증_실패_만료된_토큰(api_client, user):
     url = reverse("refresh")
     # When: 리프레시 API에 만료된 토큰과 함께 POST 요청을 보냄
     response = api_client.post(url)
-    # Then: 응답 상태 코드가 401 (Unauthorized)임
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    # Then: 응답 상태 코드가 403 (Forbidden)임
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
@@ -154,8 +154,8 @@ def test_JWT_인증_실패_유효하지_않은_토큰(api_client):
     url = reverse("refresh")
     # When: 리프레시 API에 유효하지 않은 토큰과 함께 POST 요청을 보냄
     response = api_client.post(url)
-    # Then: 응답 상태 코드가 401 (Unauthorized)임
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    # Then: 응답 상태 코드가 403 (Forbidden)임
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db

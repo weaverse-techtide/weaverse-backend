@@ -61,11 +61,6 @@ class CartView(generics.GenericAPIView):
             return Response(serializer.data)
         else:
             cart, _ = Cart.objects.get_or_create(user=request.user)
-            if not cart.cart_items.exists():
-                return Response(
-                    {"detail": "장바구니가 비어있습니다."},
-                    status=status.HTTP_200_OK,
-                )
             serializer = CartSerializer(cart)
             return Response(serializer.data)
 
@@ -154,7 +149,7 @@ class OrderView(generics.GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if cart.total_price() > 50000:
+        if cart.get_total_price() > 50000:
             return Response(
                 {"detail": "상품의 총 가격이 50,000원을 초과할 수 없습니다."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -168,7 +163,7 @@ class OrderView(generics.GenericAPIView):
                     "curriculum": item.curriculum.id if item.curriculum else None,
                     "course": item.course.id if item.course else None,
                     "quantity": item.quantity,
-                    "price": item.price(),
+                    "price": item.get_price(),
                 }
                 for item in cart.cart_items.all()
             ],
@@ -340,7 +335,7 @@ class PaymentView(generics.GenericAPIView):
     def _validate_order(self, order):
         if order.order_status != "pending":
             raise ValidationError("결제 가능한 상태의 주문이 아닙니다.")
-        if order.total_price() > 50000:
+        if order.get_total_price() > 50000:
             raise ValidationError("결제 금액이 50,000원을 초과할 수 없습니다.")
         if hasattr(order, "payment") and order.payment.payment_status == "completed":
             raise ValidationError("이미 결제가 완료된 주문입니다.")
@@ -368,7 +363,7 @@ class PaymentView(generics.GenericAPIView):
             order=order,
             user=request.user,
             payment_status="pending",
-            amount=order.total_price(),
+            amount=order.get_total_price(),
             transaction_id=kakao_response["tid"],
         )
 
@@ -575,13 +570,13 @@ class ReceiptView(generics.GenericAPIView):
             "order_info": {
                 "order_id": order.id,
                 "order_status": order.order_status,
-                "total_items": order.total_items(),
-                "total_price": order.total_price(),
+                "total_items": order.get_total_items(),
+                "total_price": order.get_total_price(),
                 "items": [
                     {
-                        "name": item.item_name,
+                        "name": item.get_item_name(),
                         "quantity": item.quantity,
-                        "price": item.price,
+                        "price": item.get_price(),
                     }
                     for item in order.order_items.all()
                 ],

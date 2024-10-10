@@ -34,9 +34,21 @@ INSTALLED_APPS = [
     "payments",
     "corsheaders",
     "django_filters",
+    # social login
+    "social_django",
+    "django.contrib.sites",
+    "rest_framework.authtoken",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.kakao",
+    "dj_rest_auth",
+    "dj_rest_auth.registration",
 ]
 
 MIDDLEWARE = [
+    "allauth.account.middleware.AccountMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -160,3 +172,47 @@ AWS_S3_OBJECT_PARAMETERS = {
 }
 
 DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+    "social_core.backends.google.GoogleOAuth2",
+]
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": [
+            "profile",
+            "email",
+        ],
+        "AUTH_PARAMS": {
+            "access_type": "online",
+        },
+        "APP": {
+            "client_id": os.getenv("SOCIAL_AUTH_GOOGLE_CLIENT_ID"),
+            "secret": os.getenv("SOCIAL_AUTH_GOOGLE_SECRET"),
+            "key": "",
+        },
+    },
+}
+
+
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+
+
+REST_USE_JWT = True
+JWT_AUTH_COOKIE = "my-app-auth"
+JWT_AUTH_REFRESH_COOKIE = "my-refresh-token"
+
+GOOGLE_CALLBACK_URL = "https://www.weaverse.site/social-login/google/"
+
+SOCIAL_AUTH_KAKAO_KEY = os.getenv("SOCIAL_AUTH_KAKAO_KEY")
+
+REDIRECT_URL = "https://www.weaverse.site"
+LOGIN_REDIRECT_URL = "/dashboard/"
+LOGOUT_REDIRECT_URL = "/"

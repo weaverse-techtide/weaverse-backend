@@ -32,12 +32,10 @@ class TestCartItemSerializer:
 @pytest.mark.django_db
 class TestCartSerializer:
     def test_cart_serializer(self, cart, course):
-        CartItem.objects.create(
-            cart=cart, course=course, quantity=1
-        )  # quantity를 1로 변경
+        CartItem.objects.create(cart=cart, course=course, quantity=1)
         serializer = CartSerializer(cart)
-        assert serializer.data["total_items"] == 1
-        assert serializer.data["total_price"] == course.price
+        assert serializer.data["get_total_items"] == 1
+        assert serializer.data["get_total_price"] == course.price
 
 
 @pytest.mark.django_db
@@ -64,8 +62,8 @@ class TestOrderSerializer:
     def test_order_serializer(self, order, course):
         OrderItem.objects.create(order=order, course=course, quantity=1)
         serializer = OrderSerializer(order)
-        assert serializer.data["total_items"] == 1
-        assert serializer.data["total_price"] == course.price
+        assert serializer.data["get_total_items"] == 1
+        assert serializer.data["get_total_price"] == course.price
 
 
 @pytest.mark.django_db

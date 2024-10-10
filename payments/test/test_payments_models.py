@@ -14,14 +14,14 @@ class TestCart:
     def test_cart_생성(self, user):
         cart = Cart.objects.create(user=user)
         assert cart.user == user
-        assert cart.total_items() == 0
-        assert cart.total_price() == 0
+        assert cart.get_total_items() == 0
+        assert cart.get_total_price() == 0
 
     def test_cart_total_items_and_price(self, cart, course, curriculum):
         CartItem.objects.create(cart=cart, course=course, quantity=1)
         CartItem.objects.create(cart=cart, curriculum=curriculum, quantity=1)
-        assert cart.total_items() == 2
-        assert cart.total_price() == course.price + curriculum.price
+        assert cart.get_total_items() == 2
+        assert cart.get_total_price() == course.price + curriculum.price
 
 
 @pytest.mark.django_db
@@ -30,14 +30,14 @@ class TestOrder:
         order = Order.objects.create(user=user, order_status="pending")
         assert order.user == user
         assert order.order_status == "pending"
-        assert order.total_items() == 0
-        assert order.total_price() == 0
+        assert order.get_total_items() == 0
+        assert order.get_total_price() == 0
 
     def test_order_total_items_and_price(self, order, course, curriculum):
         OrderItem.objects.create(order=order, course=course, quantity=1)
         OrderItem.objects.create(order=order, curriculum=curriculum, quantity=1)
-        assert order.total_items() == 2
-        assert order.total_price() == course.price + curriculum.price
+        assert order.get_total_items() == 2
+        assert order.get_total_price() == course.price + curriculum.price
 
 
 @pytest.mark.django_db

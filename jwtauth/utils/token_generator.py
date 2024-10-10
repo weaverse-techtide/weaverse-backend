@@ -15,7 +15,7 @@ def generate_access_token(user):
         "iat": timezone.now(),
         "nickname": user.nickname,
         "email": user.email,
-        "image": user.image,
+        # "image": user.image,
         "exp": timezone.now() + timedelta(minutes=30),
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")

@@ -32,14 +32,14 @@ class TestKakaoPayService카카오페이서비스:
         mock_post.assert_called_once()
 
     @patch("payments.services.requests.post")
-    def test_결제_취소(self, mock_post, payment, mock_kakao_pay_settings):
+    def test_결제_환불(self, mock_post, payment, mock_kakao_pay_settings):
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"canceled_amount": {"total": 10000}}
         mock_post.return_value = mock_response
 
         service = KakaoPayService()
-        result = service.cancel_payment(payment)
+        result = service.refund_payment(payment)
 
         assert result["canceled_amount"]["total"] == 10000
         mock_post.assert_called_once()
@@ -66,11 +66,11 @@ class TestKakaoPayService카카오페이서비스:
             service.approve_payment(payment, "test_pg_token")
 
     @patch("payments.services.requests.post")
-    def test_결제_취소_실패(self, mock_post, payment, mock_kakao_pay_settings):
+    def test_결제_환불_실패(self, mock_post, payment, mock_kakao_pay_settings):
         mock_response = MagicMock()
         mock_response.status_code = 400
         mock_post.return_value = mock_response
 
         service = KakaoPayService()
-        with pytest.raises(Exception, match="카카오페이 결제 취소 실패"):
-            service.cancel_payment(payment)
+        with pytest.raises(Exception, match="카카오페이 결제 환불 실패"):
+            service.refund_payment(payment)

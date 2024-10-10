@@ -78,6 +78,8 @@ class TestPaymentView결제뷰:
 @pytest.mark.django_db
 class TestReceiptView영수증뷰:
     def test_영수증_목록_조회(self, api_client, user, payment):
+        payment.payment_status = "completed"
+        payment.save()
         api_client.force_authenticate(user=user)
         url = reverse("payments:receipt-list")
         response = api_client.get(url)
@@ -85,6 +87,8 @@ class TestReceiptView영수증뷰:
         assert len(response.data) == 1
 
     def test_영수증_상세_조회(self, api_client, user, payment):
+        payment.payment_status = "completed"
+        payment.save()
         api_client.force_authenticate(user=user)
         url = reverse("payments:receipt-detail", args=[payment.id])
         response = api_client.get(url)

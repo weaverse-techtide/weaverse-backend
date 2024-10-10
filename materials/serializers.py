@@ -1,6 +1,4 @@
 import cv2
-from accounts.models import CustomUser
-from courses.models import Course, Topic
 from PIL import Image as PILImage
 from rest_framework import serializers
 
@@ -8,29 +6,17 @@ from .models import Image, Video, VideoEventData
 
 
 class ImageSerializer(serializers.ModelSerializer):
-    course_title = serializers.CharField(source="course.title", read_only=True)
 
     class Meta:
         model = Image
         fields = [
             "id",
-            "course",
-            "course_title",
             "title",
             "file",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
-
-    def validate_course(self, value):
-        request = self.context.get("request")
-        if request and request.user.is_authenticated:
-            if not request.user.is_staff and value.tutor != request.user:
-                raise serializers.ValidationError(
-                    "이 course에 이미지를 넣을 권한이 없습니다."
-                )
-        return value
 
     def validate_file(self, value):
         # 이미지 형식과 크기 유효성 검사

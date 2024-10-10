@@ -337,7 +337,7 @@ class PaymentView(generics.GenericAPIView):
             raise ValidationError("결제 가능한 상태의 주문이 아닙니다.")
         if order.get_total_price() > 50000:
             raise ValidationError("결제 금액이 50,000원을 초과할 수 없습니다.")
-        if hasattr(order, "payment") and order.payment.payment_status == "completed":
+        if order.payments.filter(payment_status="completed").exists():
             raise ValidationError("이미 결제가 완료된 주문입니다.")
 
     @transaction.atomic
@@ -349,6 +349,26 @@ class PaymentView(generics.GenericAPIView):
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+        # 이미 진행 중인 결제가 있는지 확인
+        existing_payment = Payment.objects.filter(
+            order=order, payment_status="pending"
+        ).first()
+        if existing_payment:
+            # 기존 결제 요청의 유효성 검사 (예: 15분 이내)
+            if timezone.now() - existing_payment.created_at < timezone.timedelta(
+                minutes=15
+            ):
+                return Response(
+                    {
+                        "detail": "이미 진행 중인 결제가 있습니다. 잠시 후 다시 시도해 주세요."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            else:
+                # 오래된 pending 결제는 취소 처리
+                existing_payment.payment_status = "cancelled"
+                existing_payment.save()
+
         try:
             kakao_response = self.kakao_pay_service.request_payment(order)
         except Exception as e:
@@ -359,12 +379,18 @@ class PaymentView(generics.GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # 결제 요청 성공 후, payment 생성(address 추가)
+        billing_address = UserBillingAddress.objects.filter(
+            user=request.user, is_default=True
+        ).first()
+
         payment = Payment.objects.create(
             order=order,
             user=request.user,
             payment_status="pending",
             amount=order.get_total_price(),
             transaction_id=kakao_response["tid"],
+            billing_address=billing_address,
         )
 
         serializer = self.get_serializer(payment)
@@ -381,6 +407,20 @@ class PaymentView(generics.GenericAPIView):
     @transaction.atomic
     def get(self, request, order_id):
         order = get_object_or_404(Order, id=order_id, user=request.user)
+
+        if order.order_status != "pending":
+            return Response(
+                {"detail": "이미 처리된 주문입니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 중복 결제 확인
+        if hasattr(order, "payment") and order.payment.payment_status == "completed":
+            return Response(
+                {"detail": "이미 결제가 완료된 주문입니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         payment = get_object_or_404(Payment, order=order)
         result = request.GET.get("result")
         pg_token = request.GET.get("pg_token")
@@ -407,8 +447,6 @@ class PaymentView(generics.GenericAPIView):
         try:
             self.kakao_pay_service.approve_payment(payment, pg_token)
         except Exception as e:
-            order.order_status = "failed"
-            order.save()
             payment.payment_status = "failed"
             payment.save()
             return Response(
@@ -446,7 +484,7 @@ class PaymentView(generics.GenericAPIView):
         serializer = self.get_serializer(payment)
         return Response(
             {
-                "detail": "결제 과정이 사용자에 의해 취소되었습니다.",
+                "detail": "결제 과정이 취소되었습니다.",
                 "data": serializer.data,
             },
             status=status.HTTP_200_OK,
@@ -455,13 +493,13 @@ class PaymentView(generics.GenericAPIView):
     def _handle_fail(self, order, payment):
         payment.payment_status = "failed"
         payment.save()
-        order.order_status = "failed"
-        order.save()
+
+        # 사용자의 의도랑 다를 수 있으므로 주문 상태는 변경하지 않음. 재결제를 위함.
 
         serializer = self.get_serializer(payment)
         return Response(
             {
-                "detail": "결제 처리 중 오류가 발생했습니다. 다시 시도해 주세요.",
+                "detail": "결제 처리 중 오류가 발생했습니다. 나중에 다시 시도해 주세요.",
                 "data": serializer.data,
             },
             status=status.HTTP_400_BAD_REQUEST,
@@ -470,11 +508,25 @@ class PaymentView(generics.GenericAPIView):
     @transaction.atomic
     def delete(self, request, order_id):
         order = get_object_or_404(Order, id=order_id, user=request.user)
-        payment = get_object_or_404(Payment, order=order)
 
-        if payment.payment_status != "completed":
+        # 주문 상태 확인
+        if order.order_status != "completed":
             return Response(
-                {"detail": "완료된 결제만 취소할 수 있습니다."},
+                {"detail": "완료된 주문만 취소할 수 있습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        payment = order.payments.filter(payment_status="completed").latest("paid_at")
+        if not payment:
+            return Response(
+                {"detail": "해당 주문에 대한 완료된 결제를 찾을 수 없습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 결제 취소 가능 기간 확인 (예: 7일 이내)
+        if timezone.now() - payment.paid_at > timezone.timedelta(days=7):
+            return Response(
+                {"detail": "결제 후 7일이 지나 취소할 수 없습니다."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -488,10 +540,10 @@ class PaymentView(generics.GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        payment.payment_status = "cancelled"
+        payment.payment_status = "refunded"
         payment.cancelled_at = timezone.now()
         payment.save()
-        order.order_status = "cancelled"
+        order.order_status = "refunded"
         order.save()
 
         # OrderItem의 expiry_date 초기화
@@ -500,13 +552,16 @@ class PaymentView(generics.GenericAPIView):
             order_item.save()
 
         serializer = self.get_serializer(payment)
-        return Response(serializer.data)
+        return Response(
+            {"detail": "결제가 성공적으로 환불되었습니다.", "data": serializer.data},
+            status=status.HTTP_200_OK,
+        )
 
 
 @extend_schema_view(
     get=extend_schema(
         summary="영수증 목록 조회 또는 상세 조회 API",
-        description="사용자의 모든 결제에 대한 영수증 목록을 조회하거나, 특정 결제에 대한 상세 영수증 정보를 조회합니다.",
+        description="사용자가 결제 완료/환불 한 모든 영수증 목록을 조회하거나, 특정 결제에 대한 상세 영수증 정보를 조회합니다.",
         responses={200: PaymentSerializer(many=True)},
     ),
 )
@@ -514,7 +569,7 @@ class ReceiptView(generics.GenericAPIView):
     """
     영수증 조회 관련 기능을 처리합니다.
 
-    [GET /receipts/]: 사용자의 모든 결제에 대한 영수증 목록을 조회합니다.
+    [GET /receipts/]: 사용자가 결제 완료/환불 한 모든 영수증 목록을 조회합니다.
     [GET /receipts/{payment_id}/]: 특정 결제에 대한 상세 영수증 정보를 조회합니다.
     """
 
@@ -522,7 +577,9 @@ class ReceiptView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Payment.objects.filter(user=self.request.user)
+        return Payment.objects.filter(
+            user=self.request.user, payment_status__in=["completed", "refunded"]
+        )
 
     def get(self, request, payment_id=None):
         if payment_id is None:
@@ -536,6 +593,7 @@ class ReceiptView(generics.GenericAPIView):
         receipt_list = [
             {
                 "receipt_number": f"REC-{payment.id}",
+                "payment_status": payment.payment_status,
                 "amount": payment.amount,
                 "paid_at": (
                     payment.paid_at.strftime("%Y-%m-%d %H:%M:%S")

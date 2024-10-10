@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "corsheaders",
+    "storages",
     # 로컬 앱
     "accounts",
     "jwtauth",

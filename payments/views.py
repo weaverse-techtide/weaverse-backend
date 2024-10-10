@@ -386,7 +386,7 @@ class PaymentView(generics.GenericAPIView):
 
     @transaction.atomic
     def get(self, request, order_id):
-        order = get_object_or_404(Order, id=order_id, user=request.user)
+        order = Order.objects.select_for_update().get(id=order_id, user=request.user)
 
         if order.order_status != "pending":
             return Response(

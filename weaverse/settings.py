@@ -36,7 +36,6 @@ INSTALLED_APPS = [
     "courses",
     "materials",
     "payments",
-    "corsheaders",
     "django_filters",
 ]
 

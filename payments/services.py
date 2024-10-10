@@ -48,7 +48,7 @@ class KakaoPayService:
         주어진 주문에 대해 카카오페이 결제를 승인합니다.
 
         Args:
-            order: 결제를 승인할 주문 객체
+            payment: 결제를 승인할 Payment 객체
             pg_token: 결제 승인 토큰
 
         Returns:
@@ -74,12 +74,12 @@ class KakaoPayService:
 
         return response.json()
 
-    def cancel_payment(self, payment):
+    def refund_payment(self, payment):
         """
-        주어진 주문에 대해 카카오페이 결제를 취소합니다.
+        주어진 주문에 대해 카카오페이 결제를 환불합니다.
 
         Args:
-            order: 결제를 취소할 주문 객체
+            payment: 환불할 Payment 객체
 
         Returns:
             dict: 카카오페이 결제 취소에 대한 응답 데이터
@@ -99,6 +99,6 @@ class KakaoPayService:
 
         response = requests.post(url, json=payload, headers=headers)
         if response.status_code != 200:
-            raise Exception("카카오페이 결제 취소 실패")
+            raise Exception("카카오페이 결제 환불 실패")
 
         return response.json()

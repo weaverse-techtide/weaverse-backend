@@ -36,7 +36,7 @@ class Image(models.Model):
         null=True,
         blank=True,
     )
-    image_url = models.ImageField(
+    image_url = models.URLField(
         upload_to="images/", blank=True, null=True, verbose_name="이미지 파일"
     )
     created_at = models.DateTimeField(auto_now_add=True)

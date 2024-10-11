@@ -14,12 +14,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Image, Video, VideoEventData
-from .serializers import (
-    ImageSerializer,
-    UserViewEventListSerializer,
-    VideoEventSerializer,
-    VideoSerializer,
-)
+from .serializers import (ImageSerializer, UserViewEventListSerializer,
+                          VideoEventSerializer, VideoSerializer)
 
 
 # 리팩토링할 때 중복 함수 이곳에 작성
@@ -33,10 +29,10 @@ def optimize_image(self, image_file):
     # Pillow를 사용하여 이미지 열기
     img = PILImage.open(image_file)
 
-    # 포맷 변환 (필요한 경우)
+    # 포맷 변환
     img = img.convert("RGB")
 
-    # 리사이징: 최대 너비/높이 800x600으로 조정
+    # 리사이징
     img.thumbnail((800, 600))
 
     # 이미지 필터링: 샤프닝 필터 적용

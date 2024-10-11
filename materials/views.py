@@ -1,10 +1,12 @@
 import io
 
 import boto3
+import ffmpeg
 from botocore.exceptions import ClientError
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from PIL import Image as PILImage
+from PIL import ImageFilter
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -14,16 +16,37 @@ from rest_framework.views import APIView
 from .models import Image, Video, VideoEventData
 from .serializers import (
     ImageSerializer,
+    UserViewEventListSerializer,
     VideoEventSerializer,
     VideoSerializer,
-    WatchHistorySerializer,
 )
 
+
 # 리팩토링할 때 중복 함수 이곳에 작성
+def optimize_image(self, image_file):
+    """
+    이미지를 최적화하는 메서드입니다.
+    - 포맷 변환
+    - 리사이징
+    - 필터링
+    """
+    # Pillow를 사용하여 이미지 열기
+    img = PILImage.open(image_file)
+
+    # 포맷 변환 (필요한 경우)
+    img = img.convert("RGB")
+
+    # 리사이징: 최대 너비/높이 800x600으로 조정
+    img.thumbnail((800, 600))
+
+    # 이미지 필터링: 샤프닝 필터 적용
+    img = img.filter(ImageFilter.SHARPEN)
+
+    return img
 
 
 class ImageCreateView(generics.CreateAPIView):
-    # POST 요청: 이미지 파일을 업로드합니다.
+    # POST 요청: Image 객체를 사용해서 S3에 이미지 파일을 업로드합니다.
 
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
@@ -32,15 +55,25 @@ class ImageCreateView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        # 시리얼라이저에서 유효성 검사 수행
-        if serializer.is_valid():
-            file = request.FILES.get("file")
-            if not file:
-                return Response(
-                    {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
-                )
+        image_file = request.FILES.get("image_url")
 
+        if not image_file:
+            return Response(
+                {"error": "이미지 파일이 필요합니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        optimized_image = self.optimize_image(image_file)
+
+        try:
+            # 최적화된 이미지를 임시로 메모리에 저장
+            image_io = io.BytesIO()
+            optimized_image.save(image_io, format="JPEG", quality=85)
+            image_io.seek(0)
+
+            # S3에 파일 업로드
             s3_client = boto3.client(
                 "s3",
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
@@ -48,36 +81,41 @@ class ImageCreateView(generics.CreateAPIView):
                 region_name=settings.AWS_S3_REGION_NAME,
             )
 
-            try:
-                # 이미지 최적화 (선택사항)
-                img = PILImage.open(file)
-                buffer = io.BytesIO()
-                img.save(buffer, format="JPEG", quality=85)
-                buffer.seek(0)
+            user = get_object_or_404(CustomUser, id=request.data.get("user_id"))
+            course = get_object_or_404(Course, id=request.data.get("course_id"))
 
-                # S3에 파일 업로드
-                file_name = f"images/{file.name}"
-                s3_client.upload_fileobj(
-                    buffer,
-                    settings.AWS_STORAGE_BUCKET_NAME,
-                    file_name,
-                    ExtraArgs={"ContentType": "image/jpeg"},
-                )
-
-                # 업로드된 파일의 URL 생성
-                file_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{file_name}"
-
-                # 이미지 객체 생성 및 저장
-                image = serializer.save(file=file_url)
-
+            # 파일 이름 생성: 사용자 ID와 코스 ID를 포함
+            if user:
+                file_name = f"images/user_{user.id}/{image_file.name}"
+            elif course:
+                file_name = f"images/course_{course.id}/{image_file.name}"
+            else:
                 return Response(
-                    self.get_serializer(image).data, status=status.HTTP_201_CREATED
+                    {"error": "유효한 사용자 또는 코스가 필요합니다."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            except ClientError as e:
-                return Response(
-                    {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            s3_client.upload_fileobj(
+                image_io,
+                settings.AWS_STORAGE_BUCKET_NAME,
+                file_name,
+                ExtraArgs={"ContentType": "image/jpeg"},
+            )
+
+            # 업로드된 파일의 URL 생성
+            file_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{file_name}"
+
+            # 시리얼라이저에 전달 후 저장
+            serializer.validated_data["image_url"] = file_url
+            image = serializer.save(file=file_url)
+
+            return Response(
+                self.get_serializer(image).data, status=status.HTTP_201_CREATED
+            )
+        except ClientError as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class ImageListCreateView(generics.ListCreateAPIView):
@@ -121,6 +159,13 @@ class VideoCreateView(generics.CreateAPIView):
             if not file:
                 return Response(
                     {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+            max_image_size = 5 * 1024 * 1024  # 5MB
+
+            if value.size > max_image_size:
+                raise serializers.ValidationError(
+                    "파일 크기는 5MB를 초과할 수 없습니다."
                 )
 
             # S3 클라이언트 설정
@@ -198,26 +243,12 @@ class VideoEventCreateView(generics.CreateAPIView):
     serializer_class = VideoEventSerializer
 
 
-class VideoEventListView(APIView):
-    # GET 요청:
-    def get(self, request, video_id):
-        # video_id는 URL에서 가져옵니다
-        video = get_object_or_404(Video, id=video_id)
-        video_event_data_list = (
-            video.videoEventData.all()
-        )  # related_name을 통해 데이터 조회
-        return Response({"events": [str(event) for event in video_event_data_list]})
+class UserVideoEventListView(generics.ListAPIView):
+    serializer_class = UserViewEventListSerializer
 
+    def get_queryset(self):
+        user_id = self.kwargs.get("user_id")
+        video_id = self.kwargs.get("video_id")
 
-class WatchHistoryRetrieveUpdateView(generics.RetrieveUpdateAPIView):
-    # GET 요청: 특정 영상의 시청 기록을 조회합니다.
-    # PUT 요청: 특정 영상의 시청 기록을 업데이트합니다.
-
-    serializer_class = WatchHistorySerializer
-    permission_classes = []
-
-    def get_object(self):
-        pass
-
-    def perform_update(self, serializer):
-        pass
+        # 특정 사용자와 특정 비디오에 대한 이벤트 데이터를 필터링
+        return VideoEventData.objects.filter(user_id=user_id, video_id=video_id)

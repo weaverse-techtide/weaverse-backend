@@ -75,6 +75,7 @@ class CartView(CartMixin, generics.GenericAPIView):
         cart = self.get_cart(request.user)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        serializer.save(cart=cart)
         return self.add_to_cart(cart, serializer)
 
     def delete(self, request, pk):
@@ -132,8 +133,12 @@ class OrderView(OrderMixin, CartMixin, generics.GenericAPIView):
 
             if request.data.get("from_cart", False):
                 cart = self.get_cart(request.user)
+                if not cart.cart_items.exists():
+                    raise ValidationError("장바구니가 비어 있습니다.")
                 order_data = self.create_order_from_cart(request.user, cart)
             else:
+                if "order_items" not in request.data or not request.data["order_items"]:
+                    raise ValidationError("주문 항목이 없습니다.")
                 order_data = self.create_new_order(request.user, request.data)
 
             order_data["user"] = request.user.id
@@ -318,7 +323,7 @@ class PaymentView(PaymentMixin, OrderMixin, generics.GenericAPIView):
                 status=status.HTTP_200_OK,
             )
         elif result == "fail":
-            self.fail_payment(payment, "결제 처리 중 오류가 발생했습니다.")
+            self.fail_payment(payment)
             serializer = self.get_serializer(payment)
             return Response(
                 {
@@ -386,4 +391,5 @@ class ReceiptView(ReceiptMixin, PaymentMixin, generics.GenericAPIView):
         else:
             payment = self.get_payment(request.user, id=payment_id)
             receipt_detail = self.get_receipt_detail(payment, request.user)
+            receipt_detail["id"] = payment.id
             return Response(receipt_detail)

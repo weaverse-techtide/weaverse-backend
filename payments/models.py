@@ -45,7 +45,7 @@ class Cart(models.Model):
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "장바구니"
-        verbose_name_plural = "장바구니들"
+        verbose_name_plural = "장바구니 목록"
 
     def __str__(self):
         return f"{self.user.nickname}의 장바구니"
@@ -172,7 +172,7 @@ class Order(models.Model):
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "주문"
-        verbose_name_plural = "주문들"
+        verbose_name_plural = "주문 목록"
 
     def __str__(self):
         return f"{self.user.nickname}의 주문"
@@ -277,7 +277,7 @@ class UserBillingAddress(models.Model):
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "사용자 청구 주소"
-        verbose_name_plural = "사용자 청구 주소들"
+        verbose_name_plural = "사용자 청구 주소 목록"
 
     def __str__(self):
         return f"{self.user.nickname}의 청구 주소"
@@ -340,7 +340,7 @@ class Payment(models.Model):
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "결제"
-        verbose_name_plural = "결제들"
+        verbose_name_plural = "결제 목록"
         indexes = [
             models.Index(fields=["order", "payment_status"]),
             models.Index(fields=["transaction_id"]),

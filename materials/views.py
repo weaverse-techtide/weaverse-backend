@@ -1,19 +1,25 @@
 import io
 
 import boto3
-from botocore.client import Config
 from botocore.exceptions import ClientError
 from django.conf import settings
-from django.http import StreamingHttpResponse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 from PIL import Image as PILImage
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .models import Image, Video
-from .serializers import ImageSerializer, VideoSerializer, WatchHistorySerializer
+from .models import Image, Video, VideoEventData
+from .serializers import (
+    ImageSerializer,
+    VideoEventSerializer,
+    VideoSerializer,
+    WatchHistorySerializer,
+)
+
+# 리팩토링할 때 중복 함수 이곳에 작성
 
 
 class ImageCreateView(generics.CreateAPIView):
@@ -26,6 +32,8 @@ class ImageCreateView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+
+        # 시리얼라이저에서 유효성 검사 수행
         if serializer.is_valid():
             file = request.FILES.get("file")
             if not file:
@@ -33,16 +41,6 @@ class ImageCreateView(generics.CreateAPIView):
                     {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # 이미지 파일 검증
-            try:
-                img = PILImage.open(file)
-                img.verify()
-            except:
-                return Response(
-                    {"error": "Invalid image file"}, status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # S3 클라이언트 설정
             s3_client = boto3.client(
                 "s3",
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
@@ -171,7 +169,7 @@ class VideoListCreateView(generics.ListCreateAPIView):
 
 
 class VideoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    # GET 요청: 특정 영상 파일을 조회하고 스트리밍합니다.
+    # GET 요청: 특정 영상 파일을 조회합니다.
     # PUT 요청: 특정 영상 파일을 변경합니다.
     # DELETE 요청: 특정 영상 파일을 삭제합니다.
 
@@ -187,50 +185,33 @@ class VideoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        if request.query_params.get("stream", "").lower() == "true":
-            return self.stream_video(instance)
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
-    def stream_video(self, video):
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name=settings.AWS_S3_REGION_NAME,
-        )
 
-        file_key = str(video.file)  # S3에 저장된 파일의 키
+class VideoEventCreateView(generics.CreateAPIView):
+    """
+    POST 요청을 받아 영상 파일에 대한 이벤트 정보를 저장합니다.
+    """
 
-        def generate():
-            offset = 0
-            chunk_size = 8388608  # 8MB 청크 크기
-            while True:
-                try:
-                    file_object = s3.get_object(
-                        Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-                        Key=file_key,
-                        Range=f"bytes={offset}-{offset+chunk_size-1}",
-                    )
-                    data = file_object["Body"].read()
-                    if not data:
-                        break
-                    yield data
-                    offset += len(data)
-                except Exception as e:
-                    print(f"영상 스트림 실패: {str(e)}")
-                    break
+    queryset = VideoEventData.objects.all()
+    serializer_class = VideoEventSerializer
 
-        response = StreamingHttpResponse(
-            streaming_content=generate(), content_type="video/mp4"
-        )
-        response["Content-Disposition"] = f'inline; filename="{video.title}.mp4"'
-        return response
+
+class VideoEventListView(APIView):
+    # GET 요청:
+    def get(self, request, video_id):
+        # video_id는 URL에서 가져옵니다
+        video = get_object_or_404(Video, id=video_id)
+        video_event_data_list = (
+            video.videoEventData.all()
+        )  # related_name을 통해 데이터 조회
+        return Response({"events": [str(event) for event in video_event_data_list]})
 
 
 class WatchHistoryRetrieveUpdateView(generics.RetrieveUpdateAPIView):
-    # PUT 요청: 특정 영상의 시청 기록을 업데이트합니다.
     # GET 요청: 특정 영상의 시청 기록을 조회합니다.
+    # PUT 요청: 특정 영상의 시청 기록을 업데이트합니다.
 
     serializer_class = WatchHistorySerializer
     permission_classes = []

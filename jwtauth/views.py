@@ -2,12 +2,23 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
+from dj_rest_auth.registration.views import SocialLoginView
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from django.contrib.auth import authenticate, get_user_model
 from django.conf import settings
-from .serializers import LoginSerializer, LogoutSerializer, RefreshTokenSerializer
-from .utils.token_generator import generate_access_token, generate_refresh_token
+from .serializers import (
+    LoginSerializer,
+    LogoutSerializer,
+    RefreshTokenSerializer,
+)
+from .utils.token_generator import (
+    generate_access_token,
+    generate_refresh_token,
+)
 from .models import BlacklistedToken
 import jwt, logging
+
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -36,10 +47,15 @@ class LoginView(GenericAPIView):
                 access_token = generate_access_token(user)
                 refresh_token = generate_refresh_token(user)
 
-                return Response(
-                    {"access_token": access_token, "refresh_token": refresh_token}
+                response = Response({"access_token": access_token})
+                response.set_cookie(
+                    key="refresh_token",
+                    value=refresh_token,
+                    httponly=True,
+                    secure=not settings.DEBUG,
+                    samesite="None",
                 )
-
+                return response
             else:
                 return Response(
                     {"error": "회원 가입하세요"}, status=status.HTTP_401_UNAUTHORIZED
@@ -64,7 +80,9 @@ class LogoutView(GenericAPIView):
             refresh_token = serializer.validated_data["refresh_token"]
 
             try:
-                BlacklistedToken.objects.create(token=refresh_token, user=request.user)
+                BlacklistedToken.objects.create(
+                    token=refresh_token, user=request.user, token_type="refresh"
+                )
                 return Response(
                     {"success": "로그아웃 완료."},
                     status=status.HTTP_200_OK,
@@ -136,3 +154,26 @@ class RefreshTokenView(GenericAPIView):
                 )
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GoogleLogin(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
+    callback_url = settings.GOOGLE_CALLBACK_URL
+    client_class = OAuth2Client
+
+    def get_response(self):
+        response = super().get_response()
+        user = self.user
+        access_token = generate_access_token(user)
+        refresh_token = generate_refresh_token(user)
+
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=not settings.DEBUG,
+            samesite="None",
+        )
+        response.data = {"access_token": access_token}
+
+        return response

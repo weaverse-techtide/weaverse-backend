@@ -177,7 +177,6 @@ class PaymentSerializer(serializers.ModelSerializer):
             "updated_at",
             "paid_at",
             "cancelled_at",
-            "fail_reason",
             "billing_address",
         ]
         read_only_fields = [

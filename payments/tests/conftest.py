@@ -2,6 +2,8 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from django.conf import settings
+from unittest.mock import MagicMock
+from django.utils import timezone
 
 from payments.models import (
     Cart,
@@ -12,6 +14,7 @@ from payments.models import (
     OrderItem,
 )
 from courses.models import Course, Curriculum
+from payments.services import KakaoPayService
 
 
 @pytest.fixture
@@ -48,7 +51,7 @@ def course():
     return Course.objects.create(
         title="Test Course",
         price=10000,
-        description="This is a test course description",  # 추가된 부분
+        description="This is a test course description",
     )
 
 
@@ -65,6 +68,11 @@ def cart_item(cart, course):
 @pytest.fixture
 def order(user):
     return Order.objects.create(user=user, order_status="pending")
+
+
+@pytest.fixture
+def completed_order(user):
+    return Order.objects.create(user=user, order_status="completed")
 
 
 @pytest.fixture
@@ -85,6 +93,18 @@ def user_billing_address(user):
 
 
 @pytest.fixture
+def non_default_billing_address(db, user):
+    return UserBillingAddress.objects.create(
+        user=user,
+        country="KR",
+        main_address="부산시",
+        detail_address="해운대구",
+        postal_code="48099",
+        is_default=False,
+    )
+
+
+@pytest.fixture
 def payment(user, order, user_billing_address):
     return Payment.objects.create(
         user=user,
@@ -97,7 +117,44 @@ def payment(user, order, user_billing_address):
 
 
 @pytest.fixture
+def completed_payment(user, completed_order, user_billing_address):
+    return Payment.objects.create(
+        user=user,
+        order=completed_order,
+        payment_status="completed",
+        amount=10000,
+        transaction_id="test_transaction",
+        billing_address=user_billing_address,
+    )
+
+
+@pytest.fixture
+def completed_payment_with_time(user, completed_order, user_billing_address):
+    return Payment.objects.create(
+        user=user,
+        order=completed_order,
+        payment_status="completed",
+        amount=10000,
+        transaction_id="test_transaction_with_time",
+        billing_address=user_billing_address,
+        paid_at=timezone.now(),
+    )
+
+
+@pytest.fixture
 def mock_kakao_pay_settings(settings):
     settings.KAKAOPAY_SECRET_KEY = "test_secret_key"
     settings.KAKAOPAY_CID = "test_cid"
     settings.BASE_URL = "http://testserver"
+
+
+@pytest.fixture
+def mock_kakao_pay_service():
+    return MagicMock(spec=KakaoPayService)
+
+
+@pytest.fixture
+def mock_request():
+    request = MagicMock()
+    request.user = user()
+    return request

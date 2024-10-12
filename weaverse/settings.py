@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+from celery.schedules import crontab
 
 load_dotenv()
 
@@ -250,3 +251,19 @@ REDIRECT_URL = "https://www.weaverse.site"
 LOGIN_REDIRECT_URL = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/"
 MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
+
+# Celery 설정
+CELERY_BROKER_URL = 'redis://localhost:6379/0' 
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Seoul'
+
+# Celery Beat 설정
+CELERY_BEAT_SCHEDULE = {
+    'delete-expired-tokens-monthly': {
+        'task': 'jwtauth.tasks.delete_expired_tokens',
+        'schedule': crontab(0, 0, day_of_month='1'),  
+    },
+}

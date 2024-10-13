@@ -41,12 +41,15 @@ class CartMixin(GetObjectMixin):
                 {"detail": "이 상품은 이미 장바구니에 있습니다."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        serializer.save(cart=cart)
-        return Response(
-            {"detail": "상품이 장바구니에 추가되었습니다.", "data": serializer.data},
-            status=status.HTTP_201_CREATED,
-        )
+        else:
+            serializer.save(cart=cart)
+            return Response(
+                {
+                    "detail": "상품이 장바구니에 추가되었습니다.",
+                    "data": serializer.data,
+                },
+                status=status.HTTP_201_CREATED,
+            )
 
     def remove_from_cart(self, cart_item):
         cart_item.delete()

@@ -2,18 +2,16 @@ import uuid
 
 from accounts.models import CustomUser
 from courses.models import Course, Topic
+from django.conf import settings
 from django.db import models
 
 
 def upload_to(instance, filename):
     """
-    ImageField를 통해 파일이 업로드될 때 해당 파일의 저장 경로를 동적으로 생성합니다.
-    - 모델 인스턴스가 save() 호출될 때, 파일이 저장되기 전 upload_to에 정의된 경로를 생성하기 위해 호출됩니다.
-    - ImageField의 upload_to 인자로 전달됩니다.
-    - 생성된 경로를 반환하며, 이 경로는 Django가 해당 파일을 저장할 때 사용됩니다.
-    - (장점) 사용자 접근성을 높이면서 중복 파일 이름 문제를 해결합니다. 
+    이미지 파일을 S3에 업로드할 때 사용할 경로를 동적으로 생성합니다.
+    UUID를 사용하여 중복 파일명을 피합니다.
     """
-    ext = filename.split(".")[-1]
+    ext = filename.split(".")[-1]  # 파일 확장자 추출
     return f"images/{uuid.uuid4()}.{ext}"
 
 
@@ -36,9 +34,7 @@ class Image(models.Model):
         null=True,
         blank=True,
     )
-    image_url = models.URLField(
-        upload_to="images/", blank=True, null=True, verbose_name="이미지 파일"
-    )
+    image_url = models.ImageField(upload_to=upload_to, blank=True, null=True, verbose_name="이미지 파일")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -52,9 +48,9 @@ class Image(models.Model):
     def save(self, *args, **kwargs):
 
         if self.user and not self.image_url:
-            self.image_url = "images/default_user_image.jpg"
+            self.image_url = f"{settings.MEDIA_URL}images/default_user_image.jpg"
         if self.course and not self.image_url:
-            self.image_url = "images/default_course_image.jpg"
+            self.image_url = f"{settings.MEDIA_URL}images/default_user_image.jpg"
         super().save(*args, **kwargs)
 
 
@@ -63,12 +59,22 @@ class Video(models.Model):
     course = models.OneToOneField(
         Course, on_delete=models.CASCADE, related_name="video"
     )
-    video_url = models.FileField(upload_to="videos/", verbose_name="비디오 파일")
+    video_url = models.URLField(blank=True, null=True, verbose_name="비디오 파일")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.topic.title} - {self.title}"
+        if self.topic:
+            return f"{self.topic}'s Video"
+        elif self.course:
+            return f"Course Video for {self.course}"
+        return "Video"
+    
+    def save(self, *args, **kwargs):
+        if not self.video_url:
+            self.video_url = f"{settings.MEDIA_URL}videos/default_video.mp4"
+
+        super().save(*args, **kwargs)
 
 
 class VideoEventData(models.Model):

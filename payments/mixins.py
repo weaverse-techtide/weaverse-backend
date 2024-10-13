@@ -41,12 +41,15 @@ class CartMixin(GetObjectMixin):
                 {"detail": "이 상품은 이미 장바구니에 있습니다."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        serializer.save(cart=cart)
-        return Response(
-            {"detail": "상품이 장바구니에 추가되었습니다.", "data": serializer.data},
-            status=status.HTTP_201_CREATED,
-        )
+        else:
+            serializer.save(cart=cart)
+            return Response(
+                {
+                    "detail": "상품이 장바구니에 추가되었습니다.",
+                    "data": serializer.data,
+                },
+                status=status.HTTP_201_CREATED,
+            )
 
     def remove_from_cart(self, cart_item):
         cart_item.delete()
@@ -138,11 +141,16 @@ class PaymentMixin(GetObjectMixin):
             raise ValidationError("결제 가능한 상태의 주문이 아닙니다.")
         if order.get_total_price() > 50000:
             raise ValidationError("결제 금액이 50,000원을 초과할 수 없습니다.")
-        if order.payments.filter(payment_status__in=["completed", "pending"]).exists():
-            raise ValidationError("이미 결제가 완료되었거나 진행 중인 주문입니다.")
 
     def create_payment(self, order, user):
         self.validate_order(order)
+
+        existing_payments = Payment.objects.filter(
+            order=order, payment_status="pending"
+        )
+        if existing_payments.exists():
+            # 모든 기존 pending payment를 취소 처리
+            existing_payments.update(payment_status="cancelled")
 
         try:
             kakao_response = self.kakao_pay_service.request_payment(order)
@@ -203,8 +211,11 @@ class PaymentMixin(GetObjectMixin):
         if not payment or payment.payment_status != "completed":
             raise ValidationError("해당 주문에 대한 완료된 결제를 찾을 수 없습니다.")
 
+        if payment.paid_at is None:
+            raise ValidationError("결제 완료 시간이 기록되지 않았습니다.")
+
         if timezone.now() - payment.paid_at > timezone.timedelta(days=7):
-            raise ValidationError("결제 후 7일이 지나 취소할 수 없습니다.")
+            raise ValidationError("결제 후 7일이 지난 주문은 환불할 수 없습니다.")
 
         try:
             self.kakao_pay_service.refund_payment(payment)

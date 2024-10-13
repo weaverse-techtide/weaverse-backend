@@ -4,9 +4,7 @@ import boto3
 import ffmpeg
 from accounts.permissions import IsSuperUser, IsTutor
 from botocore.exceptions import ClientError
-from courses.models import Course
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from PIL import Image as PILImage
 from PIL import ImageFilter
@@ -16,12 +14,8 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from .models import Image, Video, VideoEventData
-from .serializers import (
-    ImageSerializer,
-    UserViewEventListSerializer,
-    VideoEventSerializer,
-    VideoSerializer,
-)
+from .serializers import (ImageSerializer, UserViewEventListSerializer,
+                          VideoEventSerializer, VideoSerializer)
 
 
 # 리팩토링할 때 중복 함수 이곳에 작성

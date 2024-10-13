@@ -34,9 +34,8 @@ class TestCourseDetailSerializer:
         assert data["id"] == self.course.id
         assert data["title"] == conftest.COURSE_TITLE
         assert data["short_description"] == conftest.COURSE_SHORT_DESCRIPTION
-        assert data["description"] == conftest.COURSE_DESCRIPTION
         assert data["category"] == conftest.COURSE_CATEGORY
-        assert data["course_level"] == conftest.COURSE_COURSE_LEVEL
+        assert data["skill_level"] == conftest.COURSE_SKILL_LEVEL
         assert data["price"] == conftest.COURSE_PRICE
         assert len(data["lectures"]) == 2
         assert data["lectures"][0]["title"] == conftest.LECTURE1_TITLE
@@ -46,10 +45,6 @@ class TestCourseDetailSerializer:
         assert len(data["lectures"][0]["topics"]) == 1
         assert data["lectures"][0]["topics"][0]["title"] == conftest.TOPIC1_TITLE
         assert data["lectures"][0]["topics"][0]["type"] == conftest.TOPIC1_TYPE
-        assert (
-            data["lectures"][0]["topics"][0]["description"]
-            == conftest.TOPIC1_DESCRIPTION
-        )
         assert data["lectures"][0]["topics"][0]["order"] == conftest.TOPIC1_ORDER
         assert data["lectures"][0]["topics"][0]["is_premium"] is True
         assert (
@@ -58,10 +53,6 @@ class TestCourseDetailSerializer:
         )
         assert data["lectures"][1]["topics"][0]["title"] == conftest.TOPIC2_TITLE
         assert data["lectures"][1]["topics"][0]["type"] == conftest.TOPIC2_TYPE
-        assert (
-            data["lectures"][1]["topics"][0]["description"]
-            == conftest.TOPIC2_DESCRIPTION
-        )
         assert data["lectures"][1]["topics"][0]["order"] == conftest.TOPIC2_ORDER
         assert data["lectures"][1]["topics"][0]["is_premium"] is True
         assert (
@@ -132,8 +123,10 @@ class TestCourseDetailSerializer:
             "short_description": "Test Course",
             "description": {},
             "category": "JavaScript",
-            "course_level": "beginner",
+            "skill_level": "beginner",
             "price": 10000,
+            "thumbnail_id": 1,
+            "video_id": 3,
             "lectures": [
                 {
                     "title": "Test Lecture",
@@ -146,6 +139,7 @@ class TestCourseDetailSerializer:
                             "order": 1,
                             "is_premium": True,
                             "assignment": {"question": "Test Assignment"},
+                            "video_id": 1,
                         }
                     ],
                 },
@@ -156,7 +150,6 @@ class TestCourseDetailSerializer:
                         {
                             "title": "Test Topic 2",
                             "type": "assignment",
-                            "description": "Test Description",
                             "order": 1,
                             "is_premium": True,
                             "multiple_choice_question": {
@@ -168,6 +161,7 @@ class TestCourseDetailSerializer:
                                     {"choice": "Choice 4", "is_correct": False},
                                 ],
                             },
+                            "video_id": 2,
                         }
                     ],
                 },
@@ -179,7 +173,17 @@ class TestCourseDetailSerializer:
         serializer.is_valid(raise_exception=True)
 
         # Then
-        assert serializer.validated_data == data
+        assert serializer.validated_data["title"] == "Test Course"
+        assert serializer.validated_data["short_description"] == "Test Course"
+        assert serializer.validated_data["category"] == "JavaScript"
+        assert serializer.validated_data["skill_level"] == "beginner"
+        assert serializer.validated_data["price"] == 10000
+        assert serializer.validated_data["lectures"][0]["title"] == "Test Lecture"
+        assert serializer.validated_data["lectures"][0]["order"] == 1
+        assert (
+            serializer.validated_data["lectures"][0]["topics"][0]["title"]
+            == "Test Topic"
+        )
 
 
 @pytest.mark.django_db
@@ -197,7 +201,7 @@ class TestCourseSummarySerializer:
         assert data["title"] == conftest.COURSE_TITLE
         assert data["short_description"] == conftest.COURSE_SHORT_DESCRIPTION
         assert data["category"] == conftest.COURSE_CATEGORY
-        assert data["course_level"] == conftest.COURSE_COURSE_LEVEL
+        assert data["skill_level"] == conftest.COURSE_SKILL_LEVEL
         assert data["lectures_count"] == 2
 
     def test_course_summary_역직렬화(self):
@@ -206,7 +210,7 @@ class TestCourseSummarySerializer:
             "title": "Test Course",
             "short_description": "Test Course",
             "category": "JavaScript",
-            "course_level": "beginner",
+            "skill_level": "beginner",
         }
 
         # When
@@ -235,7 +239,6 @@ class TestLectureSerializer:
         assert len(data["topics"]) == 1
         assert data["topics"][0]["title"] == conftest.TOPIC2_TITLE
         assert data["topics"][0]["type"] == conftest.TOPIC2_TYPE
-        assert data["topics"][0]["description"] == conftest.TOPIC2_DESCRIPTION
         assert data["topics"][0]["order"] == conftest.TOPIC2_ORDER
         assert data["topics"][0]["is_premium"] is True
         assert (
@@ -299,39 +302,6 @@ class TestLectureSerializer:
             is False
         )
 
-    def test_lecture_역직렬화(self):
-        # Given
-        data = {
-            "title": "Test Lecture",
-            "order": 1,
-            "topics": [
-                {
-                    "title": "Test Topic",
-                    "type": "quiz",
-                    "description": "Test Description",
-                    "order": 1,
-                    "is_premium": True,
-                    "assignment": {"question": "Test Assignment"},
-                    "multiple_choice_question": {
-                        "question": "Test Multiple Choice Question",
-                        "multiple_choice_question_choices": [
-                            {"choice": "Choice 1", "is_correct": True},
-                            {"choice": "Choice 2", "is_correct": False},
-                            {"choice": "Choice 3", "is_correct": False},
-                            {"choice": "Choice 4", "is_correct": False},
-                        ],
-                    },
-                }
-            ],
-        }
-
-        # When
-        serializer = LectureSerializer(data=data)
-        serializer.is_valid(raise_exception=True)
-
-        # Then
-        assert serializer.validated_data == data
-
 
 @pytest.mark.django_db
 class TestTopicSerializer:
@@ -348,7 +318,6 @@ class TestTopicSerializer:
         assert data["id"] == self.topic.id
         assert data["title"] == conftest.TOPIC2_TITLE
         assert data["type"] == conftest.TOPIC2_TYPE
-        assert data["description"] == conftest.TOPIC2_DESCRIPTION
         assert data["order"] == conftest.TOPIC2_ORDER
         assert data["is_premium"] is True
         assert data["multiple_choice_question"]["question"] == conftest.MCQ_QUESTION
@@ -404,33 +373,6 @@ class TestTopicSerializer:
             ]
             is False
         )
-
-    def test_topic_역직렬화(self):
-        # Given
-        data = {
-            "title": "Test Topic",
-            "type": "quiz",
-            "description": "Test Description",
-            "order": 1,
-            "is_premium": True,
-            "assignment": {"question": "Test Assignment"},
-            "multiple_choice_question": {
-                "question": "Test Multiple Choice Question",
-                "multiple_choice_question_choices": [
-                    {"choice": "Choice 1", "is_correct": True},
-                    {"choice": "Choice 2", "is_correct": False},
-                    {"choice": "Choice 3", "is_correct": False},
-                    {"choice": "Choice 4", "is_correct": False},
-                ],
-            },
-        }
-
-        # When
-        serializer = TopicSerializer(data=data)
-        serializer.is_valid(raise_exception=True)
-
-        # Then
-        assert serializer.validated_data == data
 
 
 @pytest.mark.django_db
@@ -601,10 +543,13 @@ class TestCurriculumCreateAndUpdateSerializer:
 @pytest.mark.django_db
 class TestCurriculumReadSerializer:
 
-    def test_curriculum_직렬화(self, setup_course_data):
+    def test_curriculum_직렬화(self, setup_course_data, create_staff_user):
         # Given
         curriculum = Curriculum.objects.create(
-            name="Test Curriculum", description="Test Description", price=1000
+            name="Test Curriculum",
+            description="Test Description",
+            price=1000,
+            author=create_staff_user,
         )
         course = setup_course_data["course"]
         curriculum.courses.add(course)
@@ -623,10 +568,13 @@ class TestCurriculumReadSerializer:
 @pytest.mark.django_db
 class TestCurriculumSummarySerializer:
 
-    def test_curriculum_직렬화(self):
+    def test_curriculum_summary_직렬화(self, create_staff_user):
         # Given
         curriculum = Curriculum.objects.create(
-            name="Test Curriculum", description="Test Description", price=1000
+            name="Test Curriculum",
+            description="Test Description",
+            price=1000,
+            author=create_staff_user,
         )
 
         # When

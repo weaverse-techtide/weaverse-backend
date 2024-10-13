@@ -17,13 +17,35 @@ class Cart(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
 
     def get_total_items(self):
-        return sum(item.quantity for item in self.cart_items.all())
+        return (
+            self.cart_items.aggregate(total_items=models.Sum("quantity"))["total_items"]
+            or 0
+        )
 
     def get_total_price(self):
-        return sum(item.get_price() for item in self.cart_items.all())
+        return (
+            self.cart_items.aggregate(
+                total_price=models.Sum(
+                    models.F("quantity")
+                    * models.Case(
+                        models.When(
+                            curriculum__isnull=False, then=models.F("curriculum__price")
+                        ),
+                        models.When(
+                            course__isnull=False, then=models.F("course__price")
+                        ),
+                        default=0,
+                        output_field=models.DecimalField(),
+                    )
+                )
+            )["total_price"]
+            or 0
+        )
 
     class Meta:
+        ordering = ["-created_at"]
         verbose_name = "장바구니"
+        verbose_name_plural = "장바구니 목록"
 
     def __str__(self):
         return f"{self.user.nickname}의 장바구니"
@@ -100,36 +122,57 @@ class Order(models.Model):
     주문 모델입니다.
     """
 
-    ORDER_STATUS_CHOICES = [
-        ("pending", "대기 중"),
-        ("completed", "완료됨"),
-        ("failed", "실패함"),
-        ("cancelled", "취소됨"),
-        ("refunded", "환불됨"),
-    ]
+    class Status(models.TextChoices):
+        PENDING = "pending", "대기 중"
+        COMPLETED = "completed", "완료됨"
+        FAILED = "failed", "실패함"
+        CANCELLED = "cancelled", "취소됨"
+        REFUNDED = "refunded", "환불됨"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="사용자"
     )
     order_status = models.CharField(
         max_length=10,
-        choices=ORDER_STATUS_CHOICES,
-        default="pending",
+        choices=Status.choices,
+        default=Status.PENDING,
         verbose_name="주문 상태",
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="생성일")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
 
     def get_total_items(self):
-        return sum(item.quantity for item in self.order_items.all())
+        return (
+            self.order_items.aggregate(total_items=models.Sum("quantity"))[
+                "total_items"
+            ]
+            or 0
+        )
 
     def get_total_price(self):
-        return sum(item.get_price() for item in self.order_items.all())
+        return (
+            self.order_items.aggregate(
+                total_price=models.Sum(
+                    models.F("quantity")
+                    * models.Case(
+                        models.When(
+                            curriculum__isnull=False, then=models.F("curriculum__price")
+                        ),
+                        models.When(
+                            course__isnull=False, then=models.F("course__price")
+                        ),
+                        default=0,
+                        output_field=models.DecimalField(),
+                    )
+                )
+            )["total_price"]
+            or 0
+        )
 
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "주문"
-        verbose_name_plural = "주문들"
+        verbose_name_plural = "주문 목록"
 
     def __str__(self):
         return f"{self.user.nickname}의 주문"
@@ -185,11 +228,14 @@ class OrderItem(models.Model):
             return self.course.images.url
         return None
 
+    def set_expiry_date(self):
+        self.expiry_date = timezone.now() + timezone.timedelta(days=730)  # 2년
+
     def save(self, *args, **kwargs):
         if self.order.order_status == "completed" and (
             not self.expiry_date or self.expiry_date < timezone.now()
         ):
-            self.expiry_date = timezone.now() + timezone.timedelta(days=730)  # 2년
+            self.set_expiry_date()
         super().save(*args, **kwargs)
 
     class Meta:
@@ -231,7 +277,7 @@ class UserBillingAddress(models.Model):
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "사용자 청구 주소"
-        verbose_name_plural = "사용자 청구 주소들"
+        verbose_name_plural = "사용자 청구 주소 목록"
 
     def __str__(self):
         return f"{self.user.nickname}의 청구 주소"
@@ -250,13 +296,12 @@ class Payment(models.Model):
     결제 모델입니다.
     """
 
-    PAYMENT_STATUS_CHOICES = [
-        ("pending", "대기 중"),
-        ("completed", "완료됨"),
-        ("failed", "실패함"),
-        ("cancelled", "취소됨"),
-        ("refunded", "환불됨"),
-    ]
+    class Status(models.TextChoices):
+        PENDING = "pending", "대기 중"
+        COMPLETED = "completed", "완료됨"
+        FAILED = "failed", "실패함"
+        CANCELLED = "cancelled", "취소됨"
+        REFUNDED = "refunded", "환불됨"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -269,8 +314,8 @@ class Payment(models.Model):
     )
     payment_status = models.CharField(
         max_length=10,
-        choices=PAYMENT_STATUS_CHOICES,
-        default="pending",
+        choices=Status.choices,
+        default=Status.PENDING,
         verbose_name="결제 상태",
     )
     amount = models.PositiveIntegerField(verbose_name="결제 금액")
@@ -283,7 +328,6 @@ class Payment(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
     paid_at = models.DateTimeField(null=True, blank=True, verbose_name="결제 일시")
     cancelled_at = models.DateTimeField(null=True, blank=True, verbose_name="취소 일시")
-    fail_reason = models.TextField(verbose_name="실패 사유", blank=True, null=True)
     billing_address = models.ForeignKey(
         UserBillingAddress,
         on_delete=models.SET_NULL,
@@ -291,11 +335,16 @@ class Payment(models.Model):
         blank=True,
         verbose_name="청구 주소",
     )
+    metadata = models.JSONField(default=dict, blank=True, verbose_name="메타데이터")
 
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "결제"
-        verbose_name_plural = "결제들"
+        verbose_name_plural = "결제 목록"
+        indexes = [
+            models.Index(fields=["order", "payment_status"]),
+            models.Index(fields=["transaction_id"]),
+        ]
 
     def __str__(self):
         return f"{self.user.nickname}의 결제 ({self.get_payment_status_display()})"

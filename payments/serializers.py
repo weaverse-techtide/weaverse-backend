@@ -99,16 +99,16 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         # 커리큘럼과 코스 중 하나만 선택되었는지 확인합니다.
-        curriculum = data.get("curriculum")
-        course = data.get("course")
-        if not curriculum and not course:
-            raise serializers.ValidationError(
-                "커리큘럼 또는 코스 중 하나를 선택해야 합니다."
-            )
-        if curriculum and course:
-            raise serializers.ValidationError(
-                "커리큘럼과 코스 중 하나만 선택해야 합니다."
-            )
+        # curriculum = data.get("curriculum")
+        # course = data.get("course")
+        # if not curriculum and not course:
+        #     raise serializers.ValidationError(
+        #         "커리큘럼 또는 코스 중 하나를 선택해야 합니다."
+        #     )
+        # if curriculum and course:
+        #     raise serializers.ValidationError(
+        #         "커리큘럼과 코스 중 하나만 선택해야 합니다."
+        #     )
         return data
 
 
@@ -177,7 +177,6 @@ class PaymentSerializer(serializers.ModelSerializer):
             "updated_at",
             "paid_at",
             "cancelled_at",
-            "fail_reason",
             "billing_address",
         ]
         read_only_fields = [

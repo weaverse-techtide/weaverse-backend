@@ -1,5 +1,7 @@
 import uuid
 
+from django.db import models
+
 from accounts.models import CustomUser
 from courses.models import Course, Topic
 from django.conf import settings
@@ -55,9 +57,11 @@ class Image(models.Model):
 
 
 class Video(models.Model):
-    topic = models.OneToOneField(Topic, on_delete=models.CASCADE, related_name="video")
+    topic = models.OneToOneField(
+        Topic, on_delete=models.CASCADE, related_name="video", null=True, blank=True
+    )
     course = models.OneToOneField(
-        Course, on_delete=models.CASCADE, related_name="video"
+        Course, on_delete=models.CASCADE, related_name="video", null=True, blank=True
     )
     video_url = models.URLField(blank=True, null=True, verbose_name="비디오 파일")
     created_at = models.DateTimeField(auto_now_add=True)

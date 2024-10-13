@@ -151,7 +151,7 @@ CSRF_TRUSTED_ORIGINS = [
 # CORS 설정
 if DEBUG:
     CORS_ALLOWED_ORIGINS = [
-        "https://www.weaverse.site/",  # 프로덕션 환경
+        "https://www.weaverse.site",  # 프로덕션 환경
         "http://localhost:3000",  # 개발 환경 프론트엔드
     ]
 else:
@@ -235,6 +235,6 @@ GOOGLE_CALLBACK_URL = "https://www.weaverse.site/social-login/google/"
 SOCIAL_AUTH_KAKAO_KEY = os.getenv("SOCIAL_AUTH_KAKAO_KEY")
 
 REDIRECT_URL = "https://www.weaverse.site"
-LOGIN_REDIRECT_URL = "/dashboard/"
+LOGIN_REDIRECT_URL = os.getenv("LOGIN_REDIRECT_URL", "/")
 LOGOUT_REDIRECT_URL = "/"
 MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"

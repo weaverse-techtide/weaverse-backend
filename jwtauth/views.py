@@ -1,24 +1,20 @@
-from rest_framework.generics import GenericAPIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework import status
-from dj_rest_auth.registration.views import SocialLoginView
+import logging
+
+import jwt
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
-from django.contrib.auth import authenticate, get_user_model
+from dj_rest_auth.registration.views import SocialLoginView
 from django.conf import settings
-from .serializers import (
-    LoginSerializer,
-    LogoutSerializer,
-    RefreshTokenSerializer,
-)
-from .utils.token_generator import (
-    generate_access_token,
-    generate_refresh_token,
-)
-from .models import BlacklistedToken
-import jwt, logging
+from django.contrib.auth import authenticate, get_user_model
+from django.shortcuts import redirect
+from rest_framework import status
+from rest_framework.generics import GenericAPIView
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 
+from .models import BlacklistedToken
+from .serializers import LoginSerializer, LogoutSerializer, RefreshTokenSerializer
+from .utils.token_generator import generate_access_token, generate_refresh_token
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -47,13 +43,22 @@ class LoginView(GenericAPIView):
                 access_token = generate_access_token(user)
                 refresh_token = generate_refresh_token(user)
 
-                response = Response({"access_token": access_token})
+                response = redirect(settings.LOGIN_REDIRECT_URL)
+                same_site = None if settings.DEBUG else "Lax"
                 response.set_cookie(
                     key="refresh_token",
                     value=refresh_token,
                     httponly=True,
                     secure=not settings.DEBUG,
-                    samesite="None",
+                    samesite=same_site,
+                    max_age=60 * 60 * 24 * 14,
+                )
+                response.set_cookie(
+                    key="access_token",
+                    value=access_token,
+                    secure=not settings.DEBUG,
+                    samesite=same_site,
+                    max_age=60 * 30,
                 )
                 return response
             else:
@@ -61,7 +66,11 @@ class LoginView(GenericAPIView):
                     {"error": "회원 가입하세요"}, status=status.HTTP_401_UNAUTHORIZED
                 )
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST,
+                redirect_uri="http://localhost:3000",
+            )
 
 
 class LogoutView(GenericAPIView):

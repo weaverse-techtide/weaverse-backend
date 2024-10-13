@@ -14,8 +14,7 @@ urlpatterns = [
     path("cart/", CartView.as_view(), name="cart-list-create"),
     path("cart/<int:pk>/", CartView.as_view(), name="cart-item-delete"),
     # 주문 관련 URLs
-    path("orders/", OrderView.as_view(), name="order-list-create"),
-    path("orders/<int:pk>/", OrderView.as_view(), name="order-detail"),
+    path("orders/", OrderView.as_view(), name="order"),
     # 청구 주소 관련 URLs
     path(
         "billing-addresses/",
@@ -29,9 +28,14 @@ urlpatterns = [
     ),
     # 결제 관련 URLs
     path(
-        "payments/<int:order_id>/",
+        "payments/",
         PaymentView.as_view(),
         name="payment",
+    ),
+    path(
+        "payments/<int:order_id>/cancel/",
+        PaymentView.as_view(),
+        name="payment-cancel",
     ),
     # 영수증 관련 URLs
     path("receipts/", ReceiptView.as_view(), name="receipt-list"),

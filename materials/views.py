@@ -4,7 +4,9 @@ import boto3
 import ffmpeg
 from accounts.permissions import IsSuperUser, IsTutor
 from botocore.exceptions import ClientError
+from courses.models import Course
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from PIL import Image as PILImage
 from PIL import ImageFilter
@@ -12,7 +14,6 @@ from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from .models import Image, Video, VideoEventData
 from .serializers import (
@@ -24,7 +25,7 @@ from .serializers import (
 
 
 # 리팩토링할 때 중복 함수 이곳에 작성
-def optimize_image(self, image_file):
+def optimize_image(image_file):
     """
     이미지를 최적화하는 메서드입니다.
     - 포맷 변환
@@ -88,7 +89,7 @@ class ImageCreateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        image_file = request.FILES.get("image_url")
+        image_file = request.FILES.get("file")
 
         if not image_file:
             return Response(
@@ -96,7 +97,7 @@ class ImageCreateView(generics.CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        optimized_image = self.optimize_image(image_file)
+        optimized_image = optimize_image(image_file)
 
         try:
             # 최적화된 이미지를 임시로 메모리에 저장

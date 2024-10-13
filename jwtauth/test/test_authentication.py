@@ -1,14 +1,16 @@
-import pytest
-from rest_framework.test import APIClient
-from rest_framework import status
-from django.utils import timezone
-from django.urls import reverse
 from datetime import timedelta
+
 import jwt
+import pytest
 from django.conf import settings
+from django.urls import reverse
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.test import APIClient
+
+from accounts.models import CustomUser as User
 from jwtauth.models import BlacklistedToken
 from jwtauth.utils.token_generator import generate_access_token, generate_refresh_token
-from accounts.models import CustomUser as User
 
 
 @pytest.fixture
@@ -56,8 +58,8 @@ def test_로그인_성공(api_client, user):
         reverse("login"), {"email": "test@example.com", "password": "testpass123"}
     )
     # Then: 응답 상태 코드가 200이고, 액세스 토큰과 리프레시 토큰이 포함되어 있음
-    assert response.status_code == status.HTTP_200_OK
-    assert "access_token" in response.data
+    assert response.status_code == status.HTTP_302_FOUND
+    assert "access_token" in response.cookies
     assert "refresh_token" in response.cookies
 
 

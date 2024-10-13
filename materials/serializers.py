@@ -8,7 +8,7 @@ from .models import Image, Video, VideoEventData
 class ImageSerializer(serializers.ModelSerializer):
     """
     이미지 생성(업로드)을 위한 시리얼라이저입니다.
-    - 형식, 손상 여부에 대해 유효성 검사를 합니다. 
+    - 형식, 손상 여부에 대해 유효성 검사를 합니다.
     """
 
     class Meta:
@@ -39,16 +39,11 @@ class ImageSerializer(serializers.ModelSerializer):
 
 
 class VideoSerializer(serializers.ModelSerializer):
-    topic_title = serializers.CharField(source="topic.title", read_only=True)
-    course_title = serializers.CharField(source="topic.course.title", read_only=True)
 
     class Meta:
         model = Video
         fields = [
             "id",
-            "topic",
-            "topic_title",
-            "course_title",
             "video_url",
             "created_at",
             "updated_at",

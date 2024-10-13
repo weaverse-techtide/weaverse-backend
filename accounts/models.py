@@ -97,3 +97,8 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def get_image_url(self):
+        if getattr(self, "image", None):
+            return self.image.image_url
+        return "https://paullab.co.kr/images/weniv-licat.png"

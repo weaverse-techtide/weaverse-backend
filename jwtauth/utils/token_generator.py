@@ -1,5 +1,6 @@
-import jwt
 from datetime import timedelta
+
+import jwt
 from django.conf import settings
 from django.utils import timezone
 
@@ -8,6 +9,7 @@ def generate_access_token(user):
     """
     사용자 정보를 받아서 access token을 생성합니다.
     """
+
     payload = {
         "user_id": user.id,
         "is_staff": user.is_staff,
@@ -15,7 +17,7 @@ def generate_access_token(user):
         "iat": timezone.now(),
         "nickname": user.nickname,
         "email": user.email,
-        "image": user.image,
+        "image": user.get_image_url(),
         "exp": timezone.now() + timedelta(minutes=30),
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")

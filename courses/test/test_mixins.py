@@ -7,7 +7,7 @@ from courses.models import Course, Lecture, MultipleChoiceQuestion, Topic
 @pytest.mark.django_db
 class TestCourseMixin:
 
-    def test_create_course_with_lectures_and_topics(self):
+    def test_create_course_with_lectures_and_topics(self, create_staff_user):
         # Given
         course_mixin = CourseMixin()
         course_data = {
@@ -15,7 +15,7 @@ class TestCourseMixin:
             "short_description": "course_short_description",
             "description": "course_description",
             "category": "JavaScript",
-            "course_level": "beginner",
+            "skill_level": "beginner",
             "price": 10000,
         }
         lectures_data = [
@@ -87,7 +87,7 @@ class TestCourseMixin:
 
         # When
         course = course_mixin.create_course_with_lectures_and_topics(
-            course_data, lectures_data
+            course_data, lectures_data, create_staff_user
         )
 
         # Then
@@ -104,7 +104,7 @@ class TestCourseMixin:
         assert course.short_description == course_data["short_description"]
         assert course.description == course_data["description"]
         assert course.category == course_data["category"]
-        assert course.course_level == course_data["course_level"]
+        assert course.skill_level == course_data["skill_level"]
         assert course.price == course_data["price"]
 
         lectures = course.lectures.all()
@@ -128,7 +128,7 @@ class TestCourseMixin:
             == 4
         )
 
-    def test_create_course(self):
+    def test_create_course(self, create_staff_user):
         # Given
         course_mixin = CourseMixin()
         course_data = {
@@ -136,12 +136,12 @@ class TestCourseMixin:
             "short_description": "course_short_description",
             "description": "course_description",
             "category": "JavaScript",
-            "course_level": "beginner",
+            "skill_level": "beginner",
             "price": 10000,
         }
 
         # When
-        course = course_mixin._create_course(course_data)
+        course = course_mixin._create_course(course_data, create_staff_user)
 
         # Then
         assert course is not None
@@ -149,9 +149,9 @@ class TestCourseMixin:
         assert course.short_description == course_data["short_description"]
         assert course.description == course_data["description"]
         assert course.category == course_data["category"]
-        assert course.course_level == course_data["course_level"]
+        assert course.skill_level == course_data["skill_level"]
 
-    def test_create_lecture(self):
+    def test_create_lecture(self, create_staff_user):
         # Given
         course_mixin = CourseMixin()
         lecture_data = {
@@ -161,10 +161,11 @@ class TestCourseMixin:
         course = Course.objects.create(
             title="course_title",
             category="JavaScript",
-            course_level="beginner",
+            skill_level="beginner",
             short_description="course_short_description",
             description="course_description",
             price=10000,
+            author=create_staff_user,
         )
 
         # When
@@ -176,23 +177,23 @@ class TestCourseMixin:
         assert lecture.order == lecture_data["order"]
         assert lecture.course == course
 
-    def test_create_topic(self):
+    def test_create_topic(self, create_staff_user):
         # Given
         course_mixin = CourseMixin()
         topic_data = {
             "title": "topic_title",
             "type": "assignment",
-            "description": "topic_description",
             "order": 1,
             "is_premium": True,
         }
         lecture = Course.objects.create(
             title="course_title",
             category="JavaScript",
-            course_level="beginner",
+            skill_level="beginner",
             short_description="course_short_description",
             description="course_description",
             price=10000,
+            author=create_staff_user,
         ).lectures.create(title="lecture_title", order=1)
 
         # When
@@ -202,12 +203,11 @@ class TestCourseMixin:
         assert topic is not None
         assert topic.title == topic_data["title"]
         assert topic.type == topic_data["type"]
-        assert topic.description == topic_data["description"]
         assert topic.order == topic_data["order"]
         assert topic.is_premium == topic_data["is_premium"]
         assert topic.lecture == lecture
 
-    def test_handle_topic_type_assignment(self):
+    def test_handle_topic_type_assignment(self, create_staff_user):
         # Given
         course_mixin = CourseMixin()
         topic_data = {
@@ -223,10 +223,11 @@ class TestCourseMixin:
         lecture = Course.objects.create(
             title="course_title",
             category="JavaScript",
-            course_level="beginner",
+            skill_level="beginner",
             short_description="course_short_description",
             description="course_description",
             price=10000,
+            author=create_staff_user,
         ).lectures.create(title="lecture_title", order=1)
 
         # When
@@ -237,7 +238,7 @@ class TestCourseMixin:
         assert topic.assignment is not None
         assert topic.assignment.question == topic_data["assignment"]["question"]
 
-    def test_handle_topic_type_quiz(self):
+    def test_handle_topic_type_quiz(self, create_staff_user):
         # Given
         course_mixin = CourseMixin()
         topic_data = {
@@ -259,10 +260,11 @@ class TestCourseMixin:
         lecture = Course.objects.create(
             title="course_title",
             category="JavaScript",
-            course_level="beginner",
+            skill_level="beginner",
             short_description="course_short_description",
             description="course_description",
             price=10000,
+            author=create_staff_user,
         ).lectures.create(title="lecture_title", order=1)
 
         # When
@@ -279,7 +281,7 @@ class TestCourseMixin:
             topic.multiple_choice_question.multiple_choice_question_choices.count() == 4
         )
 
-    def test_create_assignment(self):
+    def test_create_assignment(self, create_staff_user):
         # Given
         course_mixin = CourseMixin()
         assignment_data = {
@@ -289,16 +291,16 @@ class TestCourseMixin:
             Course.objects.create(
                 title="course_title",
                 category="JavaScript",
-                course_level="beginner",
+                skill_level="beginner",
                 short_description="course_short_description",
                 description="course_description",
                 price=10000,
+                author=create_staff_user,
             )
             .lectures.create(title="lecture_title", order=1)
             .topics.create(
                 title="topic_title",
                 type="assignment",
-                description="topic_description",
                 order=1,
                 is_premium=True,
             )
@@ -311,7 +313,7 @@ class TestCourseMixin:
         assert topic.assignment is not None
         assert topic.assignment.question == assignment_data["question"]
 
-    def test_create_quiz(self):
+    def test_create_quiz(self, create_staff_user):
         # Given
         course_mixin = CourseMixin()
         multiple_choice_question_data = {
@@ -327,16 +329,16 @@ class TestCourseMixin:
             Course.objects.create(
                 title="course_title",
                 category="JavaScript",
-                course_level="beginner",
+                skill_level="beginner",
                 short_description="course_short_description",
                 description="course_description",
                 price=10000,
+                author=create_staff_user,
             )
             .lectures.create(title="lecture_title", order=1)
             .topics.create(
                 title="topic_title",
                 type="quiz",
-                description="topic_description",
                 order=1,
                 is_premium=True,
             )
@@ -361,23 +363,23 @@ class TestCourseMixin:
             == 1
         )
 
-    def test_create_multiple_choice_question_choice(self):
+    def test_create_multiple_choice_question_choice(self, create_staff_user):
         # Given
         course_mixin = CourseMixin()
         course = Course.objects.create(
             title="course_title",
             category="JavaScript",
-            course_level="beginner",
+            skill_level="beginner",
             short_description="course_short_description",
             description="course_description",
             price=10000,
+            author=create_staff_user,
         )
         lecture = Lecture.objects.create(title="lecture_title", course=course, order=1)
         topic = Topic.objects.create(
             title="topic_title",
             lecture=lecture,
             type="quiz",
-            description="topic_description",
             order=1,
             is_premium=True,
         )
@@ -403,23 +405,23 @@ class TestCourseMixin:
             == 1
         )
 
-    def test_create_multiple_choice_question(self):
+    def test_create_multiple_choice_question(self, create_staff_user):
         # Given
         course_mixin = CourseMixin()
         course = Course.objects.create(
             title="course_title",
             category="JavaScript",
-            course_level="beginner",
+            skill_level="beginner",
             short_description="course_short_description",
             description="course_description",
             price=10000,
+            author=create_staff_user,
         )
         lecture = Lecture.objects.create(title="lecture_title", course=course, order=1)
         topic = Topic.objects.create(
             title="topic_title",
             lecture=lecture,
             type="quiz",
-            description="topic_description",
             order=1,
             is_premium=True,
         )
@@ -452,23 +454,24 @@ class TestCourseMixin:
             == 1
         )
 
-    def test_update_course(self):
+    def test_update_course(self, create_staff_user):
         # Given
         course_mixin = CourseMixin()
         course = Course.objects.create(
             title="course_title",
             category="JavaScript",
-            course_level="beginner",
+            skill_level="beginner",
             short_description="course_short_description",
             description="course_description",
             price=10000,
+            author=create_staff_user,
         )
         course_data = {
             "title": "updated_course_title",
             "short_description": "updated_course_short_description",
             "description": "updated_course_description",
             "category": "Python",
-            "course_level": "intermediate",
+            "skill_level": "intermediate",
             "price": 20000,
         }
         lectures_data = [
@@ -517,7 +520,7 @@ class TestCourseMixin:
         assert course.short_description == course_data["short_description"]
         assert course.description == course_data["description"]
         assert course.category == course_data["category"]
-        assert course.course_level == course_data["course_level"]
+        assert course.skill_level == course_data["skill_level"]
         assert course.price == course_data["price"]
         assert course.lectures.count() == 1
         assert course.lectures.first().topics.count() == 2

@@ -1,15 +1,12 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.shortcuts import get_object_or_404
-from django.utils import timezone
 
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
+from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, extend_schema_view
 
-from .models import Cart, CartItem, Order, Payment, UserBillingAddress
+from .models import CartItem, Order, UserBillingAddress
 from .serializers import (
     CartItemSerializer,
     CartSerializer,
@@ -18,7 +15,15 @@ from .serializers import (
     UserBillingAddressSerializer,
     PaymentSerializer,
 )
-from .services import KakaoPayService
+from .mixins import (
+    CartMixin,
+    OrderMixin,
+    UserBillingAddressMixin,
+    PaymentMixin,
+    ReceiptMixin,
+    OrderMixin,
+)
+from .permissions import IsOwnerPermission
 
 
 @extend_schema_view(
@@ -38,157 +43,108 @@ from .services import KakaoPayService
         responses={204: None},
     ),
 )
-class CartView(generics.GenericAPIView):
+class CartView(CartMixin, generics.GenericAPIView):
     """
     장바구니 관련 기능을 처리합니다.
 
     [GET /cart/]: 사용자의 장바구니를 조회합니다.
-    [GET /cart/{pk}/]: 장바구니에서 특정 상품을 조회합니다.
-    [POST /cart/]: 사용자의 장바구니에 상품을 추가합니다.
-    [DELETE /cart/{pk}/]: 사용자의 장바구니에서 상품을 삭제합니다.
+    [GET /cart/{cart_item_id}/]: 사용자의 장바구니에서 특정 상품을 조회합니다.
+    [POST /cart/]: 장바구니에 상품을 추가합니다.
+    [DELETE /cart/{cart_item_id}/]: 장바구니에서 특정 상품을 삭제합니다.
     """
 
     serializer_class = CartItemSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return CartItem.objects.filter(cart__user=self.request.user)
+        return CartItem.objects.filter(cart__user=self.request.user).select_related(
+            "cart", "cart__user"
+        )
 
     def get(self, request, pk=None):
         if pk:
-            cart_item = get_object_or_404(self.get_queryset(), pk=pk)
+            cart_item = self.get_cart_item(self.get_cart(request.user), pk=pk)
             serializer = self.get_serializer(cart_item)
             return Response(serializer.data)
         else:
-            cart, _ = Cart.objects.get_or_create(user=request.user)
+            cart = self.get_cart(request.user)
             serializer = CartSerializer(cart)
             return Response(serializer.data)
 
     def post(self, request):
-        cart, _ = Cart.objects.get_or_create(user=request.user)
+        cart = self.get_cart(request.user)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
-        existing_item = CartItem.objects.filter(
-            cart=cart,
-            curriculum=serializer.validated_data.get("curriculum"),
-            course=serializer.validated_data.get("course"),
-        ).first()
-
-        if existing_item:
-            return Response(
-                {"detail": "이 상품은 이미 장바구니에 있습니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         serializer.save(cart=cart)
-
-        return Response(
-            {"detail": "상품이 장바구니에 추가되었습니다.", "data": serializer.data},
-            status=status.HTTP_201_CREATED,
-        )
+        return self.add_to_cart(cart, serializer)
 
     def delete(self, request, pk):
-        cart_item = get_object_or_404(self.get_queryset(), pk=pk)
-        cart_item.delete()
-        return Response(
-            {"detail": "상품이 장바구니에서 삭제되었습니다."},
-            status=status.HTTP_204_NO_CONTENT,
-        )
+        cart_item = self.get_cart_item(self.get_cart(request.user), pk=pk)
+        return self.remove_from_cart(cart_item)
 
 
 @extend_schema_view(
     get=extend_schema(
-        summary="사용자의 주문 목록을 조회하는 API",
-        description="사용자의 모든 주문 목록을 조회하거나 특정 주문을 조회합니다.",
-        responses={200: OrderSerializer(many=True)},
+        summary="사용자의 진행 중인 주문을 조회하는 API",
+        description="사용자의 현재 진행 중인 (order_status=pending) 주문을 조회합니다.",
+        responses={200: OrderSerializer},
     ),
     post=extend_schema(
         summary="새로운 주문을 생성하는 API",
-        description="주문을 바로 생성합니다. 혹은 장바구니를 통해 주문을 생성합니다.",
+        description="장바구니를 통해 주문을 생성하거나 직접 주문을 생성할 수 있습니다. 기존의 진행 중인 주문은 취소 처리됩니다.",
         responses={201: OrderSerializer},
     ),
 )
-class OrderView(generics.GenericAPIView):
+class OrderView(OrderMixin, CartMixin, generics.GenericAPIView):
     """
     주문 관련 기능을 처리합니다.
 
-    [GET /orders/]: 사용자의 모든 주문을 조회합니다.
-    [GET /orders/{pk}/]: 특정 주문의 상세 정보를 조회합니다.
+    [GET /orders/]: 사용자의 현재 진행 중인 (pending 상태의) 주문을 조회합니다.
     [POST /orders/]: 새로운 주문을 생성합니다.
+        - from_cart=False: 직접 주문을 생성합니다.
         - from_cart=True: 장바구니를 통해 주문을 생성합니다.
-        - from_cart=False: 직접 주문 항목을 지정하여 주문을 생성합니다.
+        주의: 새 주문 생성 시 기존의 진행 중인 주문은 자동으로 취소됩니다.
     """
 
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user)
+        return Order.objects.filter(user=self.request.user, order_status="pending")
 
-    def get(self, request, pk=None):
-        if pk:
-            instance = get_object_or_404(self.get_queryset(), pk=pk)
-            serializer = self.get_serializer(instance)
+    def get(self, request):
+        pending_order = self.get_queryset().first()
+        if pending_order:
+            serializer = self.get_serializer(pending_order)
+            return Response(serializer.data)
         else:
-            queryset = self.get_queryset()
-            serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+            return Response(
+                {"detail": "현재 진행 중인 주문이 없습니다.", "data": None},
+                status=status.HTTP_200_OK,
+            )
 
+    @transaction.atomic
     def post(self, request):
-        if request.data.get("from_cart", False):
-            return self._create_order_from_cart(request)
-
-        return self._create_new_order(request)
-
-    def _create_order_from_cart(self, request):
-        cart = get_object_or_404(Cart, user=request.user)
-        if not cart.cart_items.exists():
-            return Response(
-                {"detail": "장바구니가 비어있습니다."},
-                status=status.HTTP_400_BAD_REQUEST,
+        try:
+            # 기존의 pending 상태 주문을 cancelled로 변경
+            Order.objects.filter(user=request.user, order_status="pending").update(
+                order_status="cancelled"
             )
 
-        if cart.get_total_price() > 50000:
-            return Response(
-                {"detail": "상품의 총 가격이 50,000원을 초과할 수 없습니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            if request.data.get("from_cart", False):
+                cart = self.get_cart(request.user)
+                if not cart.cart_items.exists():
+                    raise ValidationError("장바구니가 비어 있습니다.")
+                order_data = self.create_order_from_cart(request.user, cart)
+            else:
+                if "order_items" not in request.data or not request.data["order_items"]:
+                    raise ValidationError("주문 항목이 없습니다.")
+                order_data = self.create_new_order(request.user, request.data)
 
-        order_data = {
-            "user": request.user.id,
-            "order_status": "pending",
-            "order_items": [
-                {
-                    "curriculum": item.curriculum.id if item.curriculum else None,
-                    "course": item.course.id if item.course else None,
-                    "quantity": item.quantity,
-                    "price": item.get_price(),
-                }
-                for item in cart.cart_items.all()
-            ],
-        }
-
-        return self._save_order(order_data, from_cart=True)
-
-    def _create_new_order(self, request):
-        order_data = request.data.copy()
-        if "order_items" not in order_data or not order_data["order_items"]:
-            return Response(
-                {"detail": "주문 항목이 없습니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        order_data["user"] = request.user.id
-        order_data["order_status"] = "pending"
-        return self._save_order(order_data, from_cart=False)
-
-    def _save_order(self, order_data, from_cart=False):
-        order_serializer = self.get_serializer(data=order_data)
-        order_serializer.is_valid(raise_exception=True)
-
-        with transaction.atomic():
-            order = order_serializer.save()
+            order_data["user"] = request.user.id
+            serializer = self.get_serializer(data=order_data)
+            serializer.is_valid(raise_exception=True)
+            order = serializer.save()
 
             for item_data in order_data["order_items"]:
                 item_data["order"] = order.id
@@ -196,19 +152,19 @@ class OrderView(generics.GenericAPIView):
                 order_item_serializer.is_valid(raise_exception=True)
                 order_item_serializer.save()
 
-            if from_cart:
-                # 장바구니를 통한 주문 생성 시에만 장바구니를 비웁니다.
-                cart = Cart.objects.get(user=order.user)
+            if request.data.get("from_cart", False):
+                cart = self.get_cart(request.user)
                 cart.cart_items.all().delete()
 
-        order_serializer = self.get_serializer(order)
-        return Response(
-            {
-                "detail": "주문이 성공적으로 생성되었습니다.",
-                "data": order_serializer.data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+            return Response(
+                {
+                    "detail": "주문이 성공적으로 생성되었습니다.",
+                    "data": serializer.data,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @extend_schema_view(
@@ -233,15 +189,15 @@ class OrderView(generics.GenericAPIView):
         responses={204: None},
     ),
 )
-class UserBillingAddressView(generics.GenericAPIView):
+class UserBillingAddressView(UserBillingAddressMixin, generics.GenericAPIView):
     """
     청구 주소 관련 기능을 처리합니다.
 
-    [GET /billing-addresses/]: 사용자의 모든 청구 주소를 조회합니다.
-    [GET /billing-addresses/{pk}/]: 특정 청구 주소의 상세 정보를 조회합니다.
-    [POST /billing-addresses/]: 새로운 청구 주소를 생성합니다. 바로 기본 청구 주소로 설정됩니다.
-    [PUT /billing-addresses/{pk}/]: 특정 청구 주소를 업데이트합니다.
-    [DELETE /billing-addresses/{pk}/]: 특정 청구 주소를 삭제합니다.
+    [GET /billing-addresses/]: 사용자의 모든 청구 주소 목록을 조회합니다.
+    [GET /billing-addresses/{billing_address_id}/]: 사용자의 특정 청구 주소를 조회합니다.
+    [POST /billing-addresses/]: 새로운 청구 주소를 생성합니다.
+    [PUT /billing-addresses/{billing_address_id}/]: 특정 청구 주소를 수정합니다.
+    [DELETE /billing-addresses/{billing_address_id}/]: 특정 청구 주소를 삭제합니다.
     """
 
     serializer_class = UserBillingAddressSerializer
@@ -250,56 +206,35 @@ class UserBillingAddressView(generics.GenericAPIView):
     def get_queryset(self):
         return UserBillingAddress.objects.filter(user=self.request.user)
 
-    def get_object(self):
-        queryset = self.get_queryset()
-        obj = get_object_or_404(queryset, pk=self.kwargs.get("pk"))
-        return obj
-
     def get(self, request, pk=None):
         if pk:
-            instance = self.get_object()
+            instance = self.get_billing_address(request.user, pk=pk)
             serializer = self.get_serializer(instance)
         else:
-            queryset = self.get_queryset()
+            queryset = UserBillingAddress.objects.filter(user=request.user)
             serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        instance = serializer.save(user=request.user, is_default=True)
-
-        UserBillingAddress.objects.filter(user=request.user, is_default=True).exclude(
-            pk=instance.pk
-        ).update(is_default=False)
-
-        return Response(
-            {"detail": "청구 주소가 생성되었습니다."}, status=status.HTTP_201_CREATED
-        )
+        return self.create_billing_address(request.user, serializer)
 
     def put(self, request, pk):
-        instance = self.get_object()
+        instance = self.get_billing_address(request.user, pk=pk)
         serializer = self.get_serializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(
-            {"detail": "청구 주소가 수정되었습니다.", "data": serializer.data},
-            status=status.HTTP_200_OK,
-        )
+        return self.update_billing_address(instance, serializer)
 
     def delete(self, request, pk):
-        instance = self.get_object()
-        instance.delete()
-        return Response(
-            {"detail": "청구 주소가 삭제되었습니다."},
-            status=status.HTTP_204_NO_CONTENT,
-        )
+        instance = self.get_billing_address(request.user, pk=pk)
+        return self.delete_billing_address(instance)
 
 
 @extend_schema_view(
     post=extend_schema(
         summary="결제를 생성하고 카카오페이 결제를 요청하는 API",
-        description="특정 주문에 대한 결제를 생성하고 카카오페이 결제를 요청합니다.",
+        description="현재 진행 중인 (pending 상태의) 주문에 대한 결제를 생성하고 카카오페이 결제를 요청합니다.",
         responses={201: PaymentSerializer},
     ),
     get=extend_schema(
@@ -313,85 +248,34 @@ class UserBillingAddressView(generics.GenericAPIView):
         responses={200: PaymentSerializer},
     ),
 )
-class PaymentView(generics.GenericAPIView):
+class PaymentView(PaymentMixin, OrderMixin, generics.GenericAPIView):
     """
     결제 관련 기능을 처리합니다.
 
-    [POST /payments/{order_id}/]: 특정 주문에 대한 결제를 생성하고 카카오페이 결제를 요청합니다.
-    [GET /payments/{order_id}/]: 카카오페이 결제 결과를 처리합니다.
-    [DELETE /payments/{order_id}/]: 결제를 취소하고 환불을 처리합니다.
+    [POST /payments/]: 현재 진행 중인 주문에 대한 결제를 생성하고 카카오페이 결제를 요청합니다.
+    [GET /payments/]: 카카오페이 결제 결과를 처리합니다.
+    [DELETE /payments/]: 결제를 취소하고 환불을 처리합니다.
     """
 
     serializer_class = PaymentSerializer
-    permission_classes = [IsAuthenticated]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.kakao_pay_service = KakaoPayService()
+    permission_classes = [IsOwnerPermission]
 
     def get_queryset(self):
-        return Payment.objects.filter(user=self.request.user)
-
-    def _validate_order(self, order):
-        if order.order_status != "pending":
-            raise ValidationError("결제 가능한 상태의 주문이 아닙니다.")
-        if order.get_total_price() > 50000:
-            raise ValidationError("결제 금액이 50,000원을 초과할 수 없습니다.")
-        if order.payments.filter(payment_status="completed").exists():
-            raise ValidationError("이미 결제가 완료된 주문입니다.")
+        return Order.objects.filter(user=self.request.user)
 
     @transaction.atomic
-    def post(self, request, order_id):
-        order = get_object_or_404(Order, id=order_id, user=request.user)
-
-        try:
-            self._validate_order(order)
-        except ValidationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 이미 진행 중인 결제가 있는지 확인
-        existing_payment = Payment.objects.filter(
-            order=order, payment_status="pending"
-        ).first()
-        if existing_payment:
-            # 기존 결제 요청의 유효성 검사 (예: 15분 이내)
-            if timezone.now() - existing_payment.created_at < timezone.timedelta(
-                minutes=15
-            ):
-                return Response(
-                    {
-                        "detail": "이미 진행 중인 결제가 있습니다. 잠시 후 다시 시도해 주세요."
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            else:
-                # 오래된 pending 결제는 취소 처리
-                existing_payment.payment_status = "cancelled"
-                existing_payment.save()
-
-        try:
-            kakao_response = self.kakao_pay_service.request_payment(order)
-        except Exception as e:
+    def post(self, request):
+        order = self.get_queryset().select_for_update().first()
+        if not order:
             return Response(
-                {
-                    "detail": "결제 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
+                {"detail": "진행 중인 주문이 없습니다."},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
-        # 결제 요청 성공 후, payment 생성(address 추가)
-        billing_address = UserBillingAddress.objects.filter(
-            user=request.user, is_default=True
-        ).first()
-
-        payment = Payment.objects.create(
-            order=order,
-            user=request.user,
-            payment_status="pending",
-            amount=order.get_total_price(),
-            transaction_id=kakao_response["tid"],
-            billing_address=billing_address,
-        )
+        try:
+            payment, kakao_response = self.create_payment(order, request.user)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = self.get_serializer(payment)
         return Response(
@@ -405,151 +289,72 @@ class PaymentView(generics.GenericAPIView):
         )
 
     @transaction.atomic
-    def get(self, request, order_id):
-        order = get_object_or_404(Order, id=order_id, user=request.user)
-
-        if order.order_status != "pending":
+    def get(self, request):
+        order = self.get_queryset().select_for_update().first()
+        if not order:
             return Response(
-                {"detail": "이미 처리된 주문입니다."},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"detail": "진행 중인 주문이 없습니다."},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
-        # 중복 결제 확인
-        if hasattr(order, "payment") and order.payment.payment_status == "completed":
-            return Response(
-                {"detail": "이미 결제가 완료된 주문입니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        payment = self.get_payment(request.user, order=order)
 
-        payment = get_object_or_404(Payment, order=order)
         result = request.GET.get("result")
         pg_token = request.GET.get("pg_token")
 
         if result == "success":
-            return self._handle_success(request, order, payment, pg_token)
+            try:
+                self.process_payment(order, payment, pg_token)
+                serializer = self.get_serializer(payment)
+                return Response(
+                    {
+                        "detail": "결제가 성공적으로 완료되었습니다.",
+                        "data": serializer.data,
+                    },
+                    status=status.HTTP_200_OK,
+                )
+            except ValidationError as e:
+                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         elif result == "cancel":
-            return self._handle_cancel(order, payment)
+            self.cancel_payment(order, payment)
+            serializer = self.get_serializer(payment)
+            return Response(
+                {"detail": "결제 과정이 취소되었습니다.", "data": serializer.data},
+                status=status.HTTP_200_OK,
+            )
         elif result == "fail":
-            return self._handle_fail(order, payment)
+            self.fail_payment(payment)
+            serializer = self.get_serializer(payment)
+            return Response(
+                {
+                    "detail": "결제 처리 중 오류가 발생했습니다. 나중에 다시 시도해 주세요.",
+                    "data": serializer.data,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         else:
             return Response(
-                {"detail": "올바르지 않은 결제 결과입니다."},
+                {"detail": "올바르지 않은 결제 결과입니다. 다시 시도해 주세요."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-    def _handle_success(self, request, order, payment, pg_token):
-        if not pg_token:
-            return Response(
-                {"detail": "결제 승인에 필요한 정보가 누락되었습니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            self.kakao_pay_service.approve_payment(payment, pg_token)
-        except Exception as e:
-            payment.payment_status = "failed"
-            payment.save()
-            return Response(
-                {
-                    "detail": "결제 승인 중 오류가 발생했습니다. 고객센터로 문의해 주세요."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        payment.payment_status = "completed"
-        payment.paid_at = timezone.now()
-        payment.save()
-        order.order_status = "completed"
-        order.save()
-
-        # OrderItem의 expiry_date 설정
-        expiry_date = timezone.now() + timezone.timedelta(days=730)  # 2년
-        for order_item in order.order_items.all():
-            order_item.expiry_date = expiry_date
-            order_item.save()
-
-        serializer = self.get_serializer(payment)
-        return Response(
-            {"detail": "결제가 성공적으로 완료되었습니다.", "data": serializer.data},
-            status=status.HTTP_200_OK,
-        )
-
-    def _handle_cancel(self, order, payment):
-        payment.payment_status = "cancelled"
-        payment.cancelled_at = timezone.now()
-        payment.save()
-        order.order_status = "cancelled"
-        order.save()
-
-        serializer = self.get_serializer(payment)
-        return Response(
-            {
-                "detail": "결제 과정이 취소되었습니다.",
-                "data": serializer.data,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-    def _handle_fail(self, order, payment):
-        payment.payment_status = "failed"
-        payment.save()
-
-        # 사용자의 의도랑 다를 수 있으므로 주문 상태는 변경하지 않음. 재결제를 위함.
-
-        serializer = self.get_serializer(payment)
-        return Response(
-            {
-                "detail": "결제 처리 중 오류가 발생했습니다. 나중에 다시 시도해 주세요.",
-                "data": serializer.data,
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
 
     @transaction.atomic
-    def delete(self, request, order_id):
-        order = get_object_or_404(Order, id=order_id, user=request.user)
-
-        # 주문 상태 확인
-        if order.order_status != "completed":
+    def delete(self, request):
+        order = self.get_queryset().select_for_update().first()
+        if not order:
             return Response(
-                {"detail": "완료된 주문만 취소할 수 있습니다."},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"detail": "진행 중인 주문이 없습니다."},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
-        payment = order.payments.filter(payment_status="completed").latest("paid_at")
-        if not payment:
-            return Response(
-                {"detail": "해당 주문에 대한 완료된 결제를 찾을 수 없습니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # 결제 취소 가능 기간 확인 (예: 7일 이내)
-        if timezone.now() - payment.paid_at > timezone.timedelta(days=7):
-            return Response(
-                {"detail": "결제 후 7일이 지나 취소할 수 없습니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        payment = self.get_payment(
+            request.user, order=order, payment_status="completed"
+        )
 
         try:
-            self.kakao_pay_service.cancel_payment(payment)
-        except Exception as e:
-            return Response(
-                {
-                    "detail": "결제 취소 중 오류가 발생했습니다. 고객센터로 문의해 주세요."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        payment.payment_status = "refunded"
-        payment.cancelled_at = timezone.now()
-        payment.save()
-        order.order_status = "refunded"
-        order.save()
-
-        # OrderItem의 expiry_date 초기화
-        for order_item in order.order_items.all():
-            order_item.expiry_date = None
-            order_item.save()
+            self.refund_payment(order, payment)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = self.get_serializer(payment)
         return Response(
@@ -565,91 +370,26 @@ class PaymentView(generics.GenericAPIView):
         responses={200: PaymentSerializer(many=True)},
     ),
 )
-class ReceiptView(generics.GenericAPIView):
+class ReceiptView(ReceiptMixin, PaymentMixin, generics.GenericAPIView):
     """
-    영수증 조회 관련 기능을 처리합니다.
+    영수증 관련 기능을 처리합니다.
 
-    [GET /receipts/]: 사용자가 결제 완료/환불 한 모든 영수증 목록을 조회합니다.
+    [GET /receipts/]: 사용자의 모든 영수증 목록을 조회합니다.
     [GET /receipts/{payment_id}/]: 특정 결제에 대한 상세 영수증 정보를 조회합니다.
     """
 
     serializer_class = PaymentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsOwnerPermission]
 
     def get_queryset(self):
-        return Payment.objects.filter(
-            user=self.request.user, payment_status__in=["completed", "refunded"]
-        )
+        return Order.objects.filter(user=self.request.user)
 
     def get(self, request, payment_id=None):
         if payment_id is None:
-            return self.get_receipt_list(request)
+            receipt_list = self.get_receipt_list(request.user)
+            return Response(receipt_list)
         else:
-            return self.get_receipt_detail(request, payment_id)
-
-    def get_receipt_list(self, request):
-        payments = self.get_queryset().order_by("-paid_at")
-
-        receipt_list = [
-            {
-                "receipt_number": f"REC-{payment.id}",
-                "payment_status": payment.payment_status,
-                "amount": payment.amount,
-                "paid_at": (
-                    payment.paid_at.strftime("%Y-%m-%d %H:%M:%S")
-                    if payment.paid_at
-                    else None
-                ),
-                "order_id": payment.order.id,
-            }
-            for payment in payments
-        ]
-
-        return Response(receipt_list)
-
-    def get_receipt_detail(self, request, payment_id):
-        payment = get_object_or_404(self.get_queryset(), id=payment_id)
-        order = payment.order
-        billing_address = payment.billing_address
-
-        receipt_data = {
-            "receipt_number": f"REC-{payment.id}",
-            "issue_date": timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "payment_info": {
-                "payment_id": payment.id,
-                "amount": payment.amount,
-                "payment_status": payment.payment_status,
-                "paid_at": (
-                    payment.paid_at.strftime("%Y-%m-%d %H:%M:%S")
-                    if payment.paid_at
-                    else None
-                ),
-            },
-            "order_info": {
-                "order_id": order.id,
-                "order_status": order.order_status,
-                "total_items": order.get_total_items(),
-                "total_price": order.get_total_price(),
-                "items": [
-                    {
-                        "name": item.get_item_name(),
-                        "quantity": item.quantity,
-                        "price": item.get_price(),
-                    }
-                    for item in order.order_items.all()
-                ],
-            },
-            "customer_info": {
-                "email": request.user.email,
-            },
-        }
-
-        if billing_address:
-            receipt_data["billing_address"] = {
-                "country": billing_address.country,
-                "main_address": billing_address.main_address,
-                "detail_address": billing_address.detail_address,
-                "postal_code": billing_address.postal_code,
-            }
-
-        return Response(receipt_data)
+            payment = self.get_payment(request.user, id=payment_id)
+            receipt_detail = self.get_receipt_detail(payment, request.user)
+            receipt_detail["id"] = payment.id
+            return Response(receipt_detail)

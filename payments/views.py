@@ -265,7 +265,12 @@ class PaymentView(PaymentMixin, OrderMixin, generics.GenericAPIView):
 
     @transaction.atomic
     def post(self, request):
-        order = self.get_queryset().filter(order_status="pending").select_for_update().first()
+        order = (
+            self.get_queryset()
+            .filter(order_status="pending")
+            .select_for_update()
+            .first()
+        )
         if not order:
             return Response(
                 {"detail": "진행 중인 주문이 없습니다."},
@@ -302,22 +307,15 @@ class PaymentView(PaymentMixin, OrderMixin, generics.GenericAPIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # 가장 최근의 pending payment를 가져오고 나머지는 취소 처리
-        payments = list(
-            Payment.objects.filter(order=order, payment_status="pending").order_by(
-                "-created_at"
-            )
+        payment = (
+            Payment.objects.filter(order=order, payment_status="pending")
+            .order_by("-created_at")
+            .first()
         )
-        if not payments:
+        if not payment:
             return Response(
                 {"detail": "해당 주문에 대한 대기 중인 결제를 찾을 수 없습니다."},
                 status=status.HTTP_404_NOT_FOUND,
-            )
-        payment = payments[0]
-        # 가장 최근의 pending payment를 제외한 나머지 payment를 취소 처리
-        if len(payments) > 1:
-            Payment.objects.filter(id__in=[p.id for p in payments[1:]]).update(
-                payment_status="cancelled"
             )
 
         result = request.GET.get("result")

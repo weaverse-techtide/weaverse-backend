@@ -141,11 +141,16 @@ class PaymentMixin(GetObjectMixin):
             raise ValidationError("결제 가능한 상태의 주문이 아닙니다.")
         if order.get_total_price() > 50000:
             raise ValidationError("결제 금액이 50,000원을 초과할 수 없습니다.")
-        if order.payments.filter(payment_status__in=["completed", "pending"]).exists():
-            raise ValidationError("이미 결제가 완료되었거나 진행 중인 주문입니다.")
 
     def create_payment(self, order, user):
         self.validate_order(order)
+
+        existing_payments = Payment.objects.filter(
+            order=order, payment_status="pending"
+        )
+        if existing_payments.exists():
+            # 모든 기존 pending payment를 취소 처리
+            existing_payments.update(payment_status="cancelled")
 
         try:
             kakao_response = self.kakao_pay_service.request_payment(order)

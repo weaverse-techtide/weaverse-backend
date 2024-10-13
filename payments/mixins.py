@@ -1,9 +1,10 @@
-from rest_framework.exceptions import NotFound, ValidationError, PermissionDenied
-from rest_framework.response import Response
-from rest_framework import status
+from django.db import transaction
 from django.utils import timezone
+from rest_framework import status
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.response import Response
 
-from .models import Cart, CartItem, Order, UserBillingAddress, Payment
+from .models import Cart, CartItem, Order, Payment, UserBillingAddress
 from .services import KakaoPayService
 
 
@@ -29,6 +30,7 @@ class CartMixin(GetObjectMixin):
     def get_cart_item(self, cart, **kwargs):
         return self.get_object_or_404(CartItem.objects.filter(cart=cart), **kwargs)
 
+    @transaction.atomic
     def add_to_cart(self, cart, serializer):
         existing_item = CartItem.objects.filter(
             cart=cart,

@@ -1,5 +1,7 @@
 from django.db import transaction
 
+from materials.models import Image, Video
+
 from .models import (
     Assignment,
     Course,
@@ -53,7 +55,7 @@ class CourseMixin:
         course 인스턴스를 생성합니다.
         """
 
-        return Course.objects.create(
+        course = Course.objects.create(
             title=course_data.get("title"),
             short_description=course_data.get("short_description"),
             description=course_data.get("description"),
@@ -62,6 +64,10 @@ class CourseMixin:
             price=course_data.get("price"),
             author=author,
         )
+        Image.objects.filter(id=course_data.get("thumbnail_id")).update(course=course)
+        Video.objects.filter(id=course_data.get("video_id")).update(course=course)
+
+        return course
 
     def _create_lecture(self, lecture_data, course):
         """
@@ -79,14 +85,15 @@ class CourseMixin:
         topic 인스턴스를 생성합니다.
         """
 
-        return Topic.objects.create(
+        topic = Topic.objects.create(
             lecture=lecture,
             title=topic_data.get("title"),
             type=topic_data.get("type"),
-            description=topic_data.get("description"),
             order=topic_data.get("order"),
             is_premium=topic_data.get("is_premium"),
         )
+        Video.objects.filter(id=topic_data.get("video_id")).update(topic=topic)
+        return topic
 
     def _handle_topic_type(self, topic, topic_data):
         """

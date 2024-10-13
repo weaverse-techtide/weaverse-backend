@@ -1,29 +1,27 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
-
-from rest_framework import generics, status
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, extend_schema_view
+from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-from .models import CartItem, Order, UserBillingAddress, Payment
+from .mixins import (
+    CartMixin,
+    OrderMixin,
+    PaymentMixin,
+    ReceiptMixin,
+    UserBillingAddressMixin,
+)
+from .models import CartItem, Order, Payment, UserBillingAddress
+from .permissions import IsOwnerPermission
 from .serializers import (
     CartItemSerializer,
     CartSerializer,
     OrderItemSerializer,
     OrderSerializer,
-    UserBillingAddressSerializer,
     PaymentSerializer,
+    UserBillingAddressSerializer,
 )
-from .mixins import (
-    CartMixin,
-    OrderMixin,
-    UserBillingAddressMixin,
-    PaymentMixin,
-    ReceiptMixin,
-    OrderMixin,
-)
-from .permissions import IsOwnerPermission
 
 
 @extend_schema_view(
@@ -75,7 +73,6 @@ class CartView(CartMixin, generics.GenericAPIView):
         cart = self.get_cart(request.user)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(cart=cart)
         return self.add_to_cart(cart, serializer)
 
     def delete(self, request, pk):

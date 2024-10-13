@@ -56,6 +56,8 @@ class TestCourseDetail:
             "category": "Python",
             "skill_level": "intermediate",
             "price": 20000,
+            "video_id": 1,
+            "thumbnail_id": 1,
             "lectures": [
                 {
                     "title": "Updated Test Lecture",
@@ -63,11 +65,11 @@ class TestCourseDetail:
                     "topics": [
                         {
                             "title": "Updated Test Topic",
-                            "type": "assignment",
-                            "description": "Updated Test Description",
+                            "type": "video",
                             "order": 1,
                             "is_premium": True,
                             "assignment": {"question": "Updated Test Assignment"},
+                            "video_id": 1,
                         }
                     ],
                 },
@@ -90,6 +92,7 @@ class TestCourseDetail:
                                     {"choice": "Updated Choice 4", "is_correct": False},
                                 ],
                             },
+                            "video_id": 2,
                         }
                     ],
                 },
@@ -112,10 +115,6 @@ class TestCourseDetail:
         assert response.data["lectures"][1]["title"] == "Updated Test Lecture 2"
         assert len(response.data["lectures"][0]["topics"]) == 1
         assert len(response.data["lectures"][1]["topics"]) == 1
-        assert (
-            response.data["lectures"][0]["topics"][0]["assignment"]["question"]
-            == "Updated Test Assignment"
-        )
         assert (
             response.data["lectures"][1]["topics"][0]["multiple_choice_question"][
                 "question"
@@ -269,6 +268,8 @@ def get_course_data():
         "category": "JavaScript",
         "skill_level": "beginner",
         "price": 10000,
+        "video_id": 1,
+        "thumbnail_id": 1,
         "lectures": [
             {
                 "title": "Test Lecture",
@@ -276,11 +277,11 @@ def get_course_data():
                 "topics": [
                     {
                         "title": "Test Topic",
-                        "type": "assignment",
+                        "type": "video",
                         "description": "Test Description",
                         "order": 1,
                         "is_premium": True,
-                        "assignment": {"question": "Test Assignment"},
+                        "video_id": 1,
                     }
                 ],
             },

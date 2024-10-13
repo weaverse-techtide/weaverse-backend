@@ -183,7 +183,6 @@ class TestCourseMixin:
         topic_data = {
             "title": "topic_title",
             "type": "assignment",
-            "description": "topic_description",
             "order": 1,
             "is_premium": True,
         }
@@ -204,7 +203,6 @@ class TestCourseMixin:
         assert topic is not None
         assert topic.title == topic_data["title"]
         assert topic.type == topic_data["type"]
-        assert topic.description == topic_data["description"]
         assert topic.order == topic_data["order"]
         assert topic.is_premium == topic_data["is_premium"]
         assert topic.lecture == lecture
@@ -303,7 +301,6 @@ class TestCourseMixin:
             .topics.create(
                 title="topic_title",
                 type="assignment",
-                description="topic_description",
                 order=1,
                 is_premium=True,
             )
@@ -342,7 +339,6 @@ class TestCourseMixin:
             .topics.create(
                 title="topic_title",
                 type="quiz",
-                description="topic_description",
                 order=1,
                 is_premium=True,
             )
@@ -384,7 +380,6 @@ class TestCourseMixin:
             title="topic_title",
             lecture=lecture,
             type="quiz",
-            description="topic_description",
             order=1,
             is_premium=True,
         )
@@ -427,7 +422,6 @@ class TestCourseMixin:
             title="topic_title",
             lecture=lecture,
             type="quiz",
-            description="topic_description",
             order=1,
             is_premium=True,
         )

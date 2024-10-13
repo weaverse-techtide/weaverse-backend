@@ -1,25 +1,32 @@
 import io
 
 import boto3
-import ffmpeg
 from botocore.exceptions import ClientError
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from PIL import Image as PILImage
 from PIL import ImageFilter
-from rest_framework import generics, permissions, status
+from rest_framework import generics, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
-from rest_framework.views import APIView
+
+from courses.models import Course
 
 from .models import Image, Video, VideoEventData
-from .serializers import (ImageSerializer, UserViewEventListSerializer,
-                          VideoEventSerializer, VideoSerializer)
+from .serializers import (
+    ImageSerializer,
+    UserViewEventListSerializer,
+    VideoEventSerializer,
+    VideoSerializer,
+)
+
+User = get_user_model()
 
 
 # 리팩토링할 때 중복 함수 이곳에 작성
-def optimize_image(self, image_file):
+def optimize_image(image_file):
     """
     이미지를 최적화하는 메서드입니다.
     - 포맷 변환
@@ -53,7 +60,7 @@ class ImageCreateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        image_file = request.FILES.get("image_url")
+        image_file = request.FILES.get("file")
 
         if not image_file:
             return Response(
@@ -61,7 +68,7 @@ class ImageCreateView(generics.CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        optimized_image = self.optimize_image(image_file)
+        optimized_image = optimize_image(image_file)
 
         try:
             # 최적화된 이미지를 임시로 메모리에 저장
@@ -77,14 +84,10 @@ class ImageCreateView(generics.CreateAPIView):
                 region_name=settings.AWS_S3_REGION_NAME,
             )
 
-            user = get_object_or_404(CustomUser, id=request.data.get("user_id"))
-            course = get_object_or_404(Course, id=request.data.get("course_id"))
-
             # 파일 이름 생성: 사용자 ID와 코스 ID를 포함
-            if user:
+            user = request.user
+            if request.user:
                 file_name = f"images/user_{user.id}/{image_file.name}"
-            elif course:
-                file_name = f"images/course_{course.id}/{image_file.name}"
             else:
                 return Response(
                     {"error": "유효한 사용자 또는 코스가 필요합니다."},
@@ -102,8 +105,7 @@ class ImageCreateView(generics.CreateAPIView):
             file_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{file_name}"
 
             # 시리얼라이저에 전달 후 저장
-            serializer.validated_data["image_url"] = file_url
-            image = serializer.save(file=file_url)
+            image = Image.objects.create(image_url=file_url, author=user)
 
             return Response(
                 self.get_serializer(image).data, status=status.HTTP_201_CREATED
@@ -159,8 +161,8 @@ class VideoCreateView(generics.CreateAPIView):
 
             max_image_size = 5 * 1024 * 1024  # 5MB
 
-            if value.size > max_image_size:
-                raise serializers.ValidationError(
+            if file.size > max_image_size:
+                raise serializer.ValidationError(
                     "파일 크기는 5MB를 초과할 수 없습니다."
                 )
 
@@ -186,7 +188,7 @@ class VideoCreateView(generics.CreateAPIView):
                 file_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{file_name}"
 
                 # 비디오 객체 생성 및 저장
-                video = serializer.save(file=file_url)
+                video = Video.objects.create(video_url=file_url)
 
                 return Response(
                     self.get_serializer(video).data, status=status.HTTP_201_CREATED

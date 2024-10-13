@@ -1,19 +1,20 @@
-import pytest
-from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
-from django.conf import settings
 from unittest.mock import MagicMock
-from django.utils import timezone
 
+import pytest
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from rest_framework.test import APIClient
+
+from courses.models import Course, Curriculum
 from payments.models import (
     Cart,
+    CartItem,
     Order,
+    OrderItem,
     Payment,
     UserBillingAddress,
-    CartItem,
-    OrderItem,
 )
-from courses.models import Course, Curriculum
 from payments.services import KakaoPayService
 
 
@@ -47,17 +48,20 @@ def cart(user):
 
 
 @pytest.fixture
-def course():
+def course(staff_user):
     return Course.objects.create(
         title="Test Course",
+        author=staff_user,
         price=10000,
         description="This is a test course description",
     )
 
 
 @pytest.fixture
-def curriculum():
-    return Curriculum.objects.create(name="Test Curriculum", price=20000)
+def curriculum(staff_user):
+    return Curriculum.objects.create(
+        name="Test Curriculum", price=20000, author=staff_user
+    )
 
 
 @pytest.fixture

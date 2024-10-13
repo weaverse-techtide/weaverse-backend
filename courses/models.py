@@ -164,7 +164,7 @@ class Lecture(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
 
     def __str__(self):
-        return f"{self.course.title} - {self.title}"
+        return f"{self.id} - {self.title}"
 
     class Meta:
         ordering = ["order"]
@@ -194,14 +194,13 @@ class Topic(models.Model):
         choices=topic_type_choices,
         default="video",
     )
-    description = models.TextField(verbose_name="설명")
     order = models.PositiveIntegerField(verbose_name="순서")
     is_premium = models.BooleanField(verbose_name="프리미엄 여부", default=False)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="생성일")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
 
     def __str__(self):
-        return f"{self.lecture.title} - {self.title}"
+        return f"{self.id} - {self.title}"
 
     class Meta:
         ordering = ["order"]

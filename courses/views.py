@@ -1,6 +1,8 @@
 from django.db import transaction
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from rest_framework import generics
+from rest_framework import filters, generics
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from .mixins import CourseMixin
@@ -13,6 +15,12 @@ from .serializers import (
     CurriculumReadSerializer,
     CurriculumSummarySerializer,
 )
+
+
+class CourseResultsSetPagination(PageNumberPagination):
+    page_size = 9
+    page_size_query_param = None
+    max_page_size = 9
 
 
 @extend_schema_view(
@@ -49,6 +57,7 @@ class CourseDetailRetrieveUpdateDestroyView(
     queryset = Course.objects.prefetch_related(
         "lectures__topics__multiple_choice_question__multiple_choice_question_choices",
         "lectures__topics__assignment",
+        "author",
     )
     serializer_class = CourseDetailSerializer
     permission_classes = [IsStaffOrReadOnly]
@@ -63,6 +72,7 @@ class CourseDetailRetrieveUpdateDestroyView(
             return []
         return super().get_permissions()
 
+    @transaction.atomic
     def update(self, request, *args, **kwargs):
         """
         course를 수정합니다.
@@ -71,21 +81,15 @@ class CourseDetailRetrieveUpdateDestroyView(
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         course = self.get_object()
-        self.perform_update(serializer, course)
+        self.update_course_with_lectures_and_topics(
+            course,
+            serializer.validated_data,
+            serializer.validated_data.get("lectures", []),
+        )
         if getattr(course, "_prefetched_objects_cache", None):
             course._prefetched_objects_cache = {}
         serializer = self.get_serializer(course)
         return Response(serializer.data)
-
-    @transaction.atomic
-    def perform_update(self, serializer, course):
-        """
-        course 및 하위 모델 lecture, topic, assignment, quiz 등을 함께 수정합니다.
-        """
-
-        self.update_course_with_lectures_and_topics(
-            course, serializer.data, serializer.data.get("lectures", [])
-        )
 
 
 @extend_schema_view(
@@ -108,6 +112,15 @@ class CourseListCreateView(CourseMixin, generics.ListCreateAPIView):
 
     queryset = Course.objects.all()
     permission_classes = [IsStaffOrReadOnly]
+    pagination_class = CourseResultsSetPagination
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    search_fields = ["title", "short_description", "description"]
+    filterset_fields = ["category", "skill_level"]
+    ordering_fields = ["created_at", "price"]
 
     def get_serializer_class(self):
         """
@@ -122,14 +135,23 @@ class CourseListCreateView(CourseMixin, generics.ListCreateAPIView):
         return CourseSummarySerializer
 
     @transaction.atomic
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
         """
-        course 및 하위 모델 lecture, topic, assignment, quiz 등을 함께 생성합니다.
+        course를 생성합니다.
         """
 
-        self.create_course_with_lectures_and_topics(
-            serializer.data, serializer.data.get("lectures", [])
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        author = self.request.user if self.request.user.is_staff else None
+
+        course = self.create_course_with_lectures_and_topics(
+            serializer.validated_data,
+            serializer.validated_data.get("lectures", []),
+            author,
         )
+        serializer = self.get_serializer(course)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=201, headers=headers)
 
 
 @extend_schema_view(
@@ -153,6 +175,14 @@ class CurriculumListCreateView(generics.ListCreateAPIView):
     queryset = Curriculum.objects.all()
     serializer_class = CurriculumSummarySerializer
     permission_classes = [IsStaffOrReadOnly]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    search_fields = ["title", "description"]
+    filterset_fields = ["category", "skill_level"]
+    ordering_fields = ["created_at", "price"]
 
     def get_serializer_class(self):
         """
@@ -171,10 +201,12 @@ class CurriculumListCreateView(generics.ListCreateAPIView):
         """
         curriculum을 생성합니다.
         """
+        author = self.request.user if self.request.user.is_staff else None
         curriculum = Curriculum.objects.create(
             name=serializer.data.get("name"),
             description=serializer.data.get("description"),
             price=serializer.data.get("price"),
+            author=author,
         )
         courses_ids = serializer.data.get("courses_ids", [])
         Course.objects.filter(id__in=courses_ids).update(curriculum=curriculum)

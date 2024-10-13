@@ -1,8 +1,4 @@
-from django.apps import apps
-from django.contrib import auth
-from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import AbstractUser, UserManager
-from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -12,41 +8,51 @@ class CustomUserManager(UserManager):
     - CustomUser에서 설정변경한 사용한 식별자(email)로 사용자 인스턴스를 생성하도록 합니다.
     """
 
-    def _create_user(self, email, password, **extra_fields):
+    def _create_user(self, email, password, nickname, **extra_fields):
         """
-        사용자 유형과 관계없이 실제로 사용자를 생성해 넘겨줍니다.
+        사용자 유형과 관계없이 사용자를 실제로 생성하고 반환합니다.
         """
         if not email:
-            raise ValueError("이메일 입력은 필수입니다.")
+            raise ValueError("이메일은 필수로 입력하셔야 합니다.")
+        if not nickname:
+            raise ValueError("닉네임은 필수로 입력하셔야 합니다.")
         email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
+        user = self.model(email=email, nickname=nickname, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_user(self, email, password=None, **extra_fields):
+    def create_user(self, email, password, nickname, **extra_fields):
         """
-        일반 사용자를 생성합니다.
+        학생(student)를 생성합니다.
         """
         extra_fields.setdefault("is_staff", False)
         extra_fields.setdefault("is_superuser", False)
-        return self._create_user(email, password, **extra_fields)
+        return self._create_user(email, password, nickname, **extra_fields)
 
-    def create_superuser(self, email, password=None, **extra_fields):
+    def create_staff(self, email, password, nickname, **extra_fields):
         """
-        슈퍼 사용자를 생성합니다.
-        """
-        extra_fields.setdefault("is_staff", True)
-        extra_fields.setdefault("is_superuser", True)
-        return self._create_user(email, password, **extra_fields)
-
-    def create_staff_user(self, email, password=None, **extra_fields):
-        """
-        관리자(강사)를 생성합니다.
+        스태프(tutor)를 생성합니다.
         """
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", False)
-        return self._create_user(email, password, **extra_fields)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Staff user must have is_staff=True.")
+        return self._create_user(email, password, nickname, **extra_fields)
+
+    def create_superuser(self, email, password, nickname, **extra_fields):
+        """
+        관리자(superuser)를 생성합니다.
+        """
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+        return self._create_user(email, password, nickname, **extra_fields)
 
 
 class CustomUser(AbstractUser):
@@ -56,14 +62,20 @@ class CustomUser(AbstractUser):
     - 사용자 매니저 지정(UserManager -> CustomUserManager)
     """
 
+    # 미사용할 기본 필드
     username = None
-    email = models.EmailField(
-        unique=True, verbose_name="이메일"
-    )  # 필드를 기본키로 지정
+    date_joined = None
 
-    nickname = models.CharField(max_length=20, verbose_name="닉네임")
-    phone_number = models.CharField(max_length=20, verbose_name="연락처")
-    introduction = models.TextField(max_length=20, verbose_name="자기소개")
+    email = models.EmailField(unique=True, verbose_name="이메일")  # 기본키 변경
+
+    # 추가 필드
+    nickname = models.CharField(max_length=20, unique=True, verbose_name="닉네임")
+    phone_number = models.CharField(
+        max_length=20, null=True, blank=True, verbose_name="연락처"
+    )
+    introduction = models.TextField(
+        max_length=20, null=True, blank=True, verbose_name="자기소개"
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="생성 일자")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="갱신 일자")
 
@@ -77,15 +89,16 @@ class CustomUser(AbstractUser):
         verbose_name="수강 학생들",  # 사용자에게 보일 이름
     )
 
-    USERNAME_FIELD = "email"  # 인증시 사용할 필드 지정
-    REQUIRED_FIELDS = []
+    # 인증시 사용할 필드
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["nickname"]  # email, password 자동 포함
 
     objects = CustomUserManager()
 
     def __str__(self):
         return self.email
 
-    def clean(self):
-        super().clean()
-        if not self.email:
-            raise ValidationError("이메일은 필수입니다.")
+    def get_image_url(self):
+        if getattr(self, "image", None):
+            return self.image.image_url
+        return "https://paullab.co.kr/images/weniv-licat.png"

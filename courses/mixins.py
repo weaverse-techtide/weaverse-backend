@@ -1,5 +1,7 @@
 from django.db import transaction
 
+from materials.models import Image, Video
+
 from .models import (
     Assignment,
     Course,
@@ -16,12 +18,14 @@ class CourseMixin:
     """
 
     @transaction.atomic
-    def create_course_with_lectures_and_topics(self, course_data, lectures_data):
+    def create_course_with_lectures_and_topics(
+        self, course_data, lectures_data, author
+    ):
         """
         course 및 하위 모델 lecture, topic, assignment, quiz 등을 함께 생성합니다.
         """
 
-        course = self._create_course(course_data)
+        course = self._create_course(course_data, author)
         for lecture_data in lectures_data:
             lecture = self._create_lecture(lecture_data, course)
             for topic_data in lecture_data.get("topics", []):
@@ -46,19 +50,24 @@ class CourseMixin:
                 topic = self._create_topic(topic_data, lecture)
                 self._handle_topic_type(topic, topic_data)
 
-    def _create_course(self, course_data):
+    def _create_course(self, course_data, author):
         """
         course 인스턴스를 생성합니다.
         """
 
-        return Course.objects.create(
+        course = Course.objects.create(
             title=course_data.get("title"),
             short_description=course_data.get("short_description"),
             description=course_data.get("description"),
             category=course_data.get("category"),
-            course_level=course_data.get("course_level"),
+            skill_level=course_data.get("skill_level"),
             price=course_data.get("price"),
+            author=author,
         )
+        Image.objects.filter(id=course_data.get("thumbnail_id")).update(course=course)
+        Video.objects.filter(id=course_data.get("video_id")).update(course=course)
+
+        return course
 
     def _create_lecture(self, lecture_data, course):
         """
@@ -76,14 +85,15 @@ class CourseMixin:
         topic 인스턴스를 생성합니다.
         """
 
-        return Topic.objects.create(
+        topic = Topic.objects.create(
             lecture=lecture,
             title=topic_data.get("title"),
             type=topic_data.get("type"),
-            description=topic_data.get("description"),
             order=topic_data.get("order"),
             is_premium=topic_data.get("is_premium"),
         )
+        Video.objects.filter(id=topic_data.get("video_id")).update(topic=topic)
+        return topic
 
     def _handle_topic_type(self, topic, topic_data):
         """

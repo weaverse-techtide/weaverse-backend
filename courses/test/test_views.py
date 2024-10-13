@@ -21,7 +21,7 @@ class TestCourseDetail:
         assert response.data["title"] == conftest.COURSE_TITLE
         assert response.data["short_description"] == conftest.COURSE_SHORT_DESCRIPTION
         assert response.data["category"] == conftest.COURSE_CATEGORY
-        assert response.data["course_level"] == conftest.COURSE_COURSE_LEVEL
+        assert response.data["skill_level"] == conftest.COURSE_SKILL_LEVEL
         assert response.data["created_at"] is not None
         assert response.data["updated_at"] is not None
         assert len(response.data["lectures"]) == 2
@@ -44,21 +44,20 @@ class TestCourseDetail:
             is not None
         )
 
-    def test_course_수정(self, api_client, setup_course_data):
+    def test_course_수정(self, api_client, setup_course_data, staff_user_token):
         # Given
         course = setup_course_data["course"]
         url = reverse("courses:course-detail", args=[course.id])
-        api_client.login(
-            username=conftest.TEST_STAFF_USER_EMAIL,
-            password=conftest.TEST_STAFF_USER_PASSWORD,
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {staff_user_token}")
         data = {
             "title": "Updated Test Course",
             "short_description": "Updated Test Course",
             "description": {},
             "category": "Python",
-            "course_level": "intermediate",
+            "skill_level": "intermediate",
             "price": 20000,
+            "video_id": 1,
+            "thumbnail_id": 1,
             "lectures": [
                 {
                     "title": "Updated Test Lecture",
@@ -66,11 +65,11 @@ class TestCourseDetail:
                     "topics": [
                         {
                             "title": "Updated Test Topic",
-                            "type": "assignment",
-                            "description": "Updated Test Description",
+                            "type": "video",
                             "order": 1,
                             "is_premium": True,
                             "assignment": {"question": "Updated Test Assignment"},
+                            "video_id": 1,
                         }
                     ],
                 },
@@ -93,6 +92,7 @@ class TestCourseDetail:
                                     {"choice": "Updated Choice 4", "is_correct": False},
                                 ],
                             },
+                            "video_id": 2,
                         }
                     ],
                 },
@@ -107,7 +107,7 @@ class TestCourseDetail:
         assert response.data["title"] == "Updated Test Course"
         assert response.data["short_description"] == "Updated Test Course"
         assert response.data["category"] == "Python"
-        assert response.data["course_level"] == "intermediate"
+        assert response.data["skill_level"] == "intermediate"
         assert response.data["created_at"] is not None
         assert response.data["updated_at"] is not None
         assert len(response.data["lectures"]) == 2
@@ -115,10 +115,6 @@ class TestCourseDetail:
         assert response.data["lectures"][1]["title"] == "Updated Test Lecture 2"
         assert len(response.data["lectures"][0]["topics"]) == 1
         assert len(response.data["lectures"][1]["topics"]) == 1
-        assert (
-            response.data["lectures"][0]["topics"][0]["assignment"]["question"]
-            == "Updated Test Assignment"
-        )
         assert (
             response.data["lectures"][1]["topics"][0]["multiple_choice_question"][
                 "question"
@@ -132,15 +128,16 @@ class TestCourseDetail:
             == "Updated Choice 1"
         )
 
-    def test_course_수정_실패_로그인하지않은경우(self, api_client):
+    def test_course_수정_실패_로그인하지않은경우(self, api_client, create_staff_user):
         # Given
         course = Course.objects.create(
             title="Test Course",
             short_description="Test Course",
             description={},
             category="JavaScript",
-            course_level="beginner",
+            skill_level="beginner",
             price=10000,
+            author=create_staff_user,
         )
         url = reverse("courses:course-detail", args=[course.id])
         data = {
@@ -148,7 +145,7 @@ class TestCourseDetail:
             "short_description": "Updated Test Course",
             "description": {},
             "category": "Python",
-            "course_level": "intermediate",
+            "skill_level": "intermediate",
             "price": 20000,
         }
 
@@ -161,26 +158,27 @@ class TestCourseDetail:
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
 
-    def test_course_수정_실패_일반유저인_경우(self, api_client):
+    def test_course_수정_실패_일반유저인_경우(
+        self, api_client, user_token, create_staff_user
+    ):
         # Given
         course = Course.objects.create(
             title="Test Course",
             short_description="Test Course",
             description={},
             category="JavaScript",
-            course_level="beginner",
+            skill_level="beginner",
             price=10000,
+            author=create_staff_user,
         )
         url = reverse("courses:course-detail", args=[course.id])
-        api_client.login(
-            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
         data = {
             "title": "Updated Test Course",
             "short_description": "Updated Test Course",
             "description": {},
             "category": "Python",
-            "course_level": "intermediate",
+            "skill_level": "intermediate",
             "price": 20000,
         }
 
@@ -193,21 +191,19 @@ class TestCourseDetail:
             "detail": "이 작업을 수행할 권한(permission)이 없습니다."
         }
 
-    def test_course_삭제(self, api_client):
+    def test_course_삭제(self, api_client, staff_user_token, create_staff_user):
         # Given
         course = Course.objects.create(
             title="Test Course",
             short_description="Test Course",
             description={},
             category="JavaScript",
-            course_level="beginner",
+            skill_level="beginner",
             price=10000,
+            author=create_staff_user,
         )
         url = reverse("courses:course-detail", args=[course.id])
-        api_client.login(
-            username=conftest.TEST_STAFF_USER_EMAIL,
-            password=conftest.TEST_STAFF_USER_PASSWORD,
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {staff_user_token}")
 
         # When
         response = api_client.delete(url)
@@ -216,15 +212,16 @@ class TestCourseDetail:
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert Course.objects.count() == 0
 
-    def test_course_삭제_실패_로그인하지않은경우(self, api_client):
+    def test_course_삭제_실패_로그인하지않은경우(self, api_client, create_staff_user):
         # Given
         course = Course.objects.create(
             title="Test Course",
             short_description="Test Course",
             description={},
             category="JavaScript",
-            course_level="beginner",
+            skill_level="beginner",
             price=10000,
+            author=create_staff_user,
         )
         url = reverse("courses:course-detail", args=[course.id])
 
@@ -237,20 +234,21 @@ class TestCourseDetail:
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
 
-    def test_course_삭제_실패_일반유저인_경우(self, api_client, create_user):
+    def test_course_삭제_실패_일반유저인_경우(
+        self, api_client, user_token, create_staff_user
+    ):
         # Given
         course = Course.objects.create(
             title="Test Course",
             short_description="Test Course",
             description={},
             category="JavaScript",
-            course_level="beginner",
+            skill_level="beginner",
             price=10000,
+            author=create_staff_user,
         )
         url = reverse("courses:course-detail", args=[course.id])
-        api_client.login(
-            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
 
         # When
         response = api_client.delete(url)
@@ -268,8 +266,10 @@ def get_course_data():
         "short_description": "Test Course",
         "description": {},
         "category": "JavaScript",
-        "course_level": "beginner",
+        "skill_level": "beginner",
         "price": 10000,
+        "video_id": 1,
+        "thumbnail_id": 1,
         "lectures": [
             {
                 "title": "Test Lecture",
@@ -277,11 +277,11 @@ def get_course_data():
                 "topics": [
                     {
                         "title": "Test Topic",
-                        "type": "assignment",
+                        "type": "video",
                         "description": "Test Description",
                         "order": 1,
                         "is_premium": True,
-                        "assignment": {"question": "Test Assignment"},
+                        "video_id": 1,
                     }
                 ],
             },
@@ -314,13 +314,10 @@ def get_course_data():
 @pytest.mark.django_db
 class TestCourseList:
 
-    def test_course_생성_요청(self, api_client, create_staff_user):
+    def test_course_생성_요청(self, api_client, staff_user_token):
         # Given
         url = reverse("courses:course-list")
-        api_client.login(
-            username=conftest.TEST_STAFF_USER_EMAIL,
-            password=conftest.TEST_STAFF_USER_PASSWORD,
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {staff_user_token}")
         data = get_course_data()
 
         # When
@@ -329,12 +326,10 @@ class TestCourseList:
         # Then
         assert response.status_code == status.HTTP_201_CREATED
 
-    def test_course_생성_요청_실패_일반유저인_경우(self, api_client, create_user):
+    def test_course_생성_요청_실패_일반유저인_경우(self, api_client, user_token):
         # Given
         url = reverse("courses:course-list")
-        api_client.login(
-            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
         data = get_course_data()
 
         # When
@@ -368,8 +363,9 @@ class TestCourseList:
                 short_description="Test Course",
                 description={},
                 category="JavaScript",
-                course_level="beginner",
+                skill_level="beginner",
                 price=10000,
+                author=create_user,
             )
         url = reverse("courses:course-list")
         api_client.login(
@@ -381,19 +377,18 @@ class TestCourseList:
 
         # Then
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 5
+        assert response.data["count"] == 5
 
 
 @pytest.mark.django_db
 class TestCurriculumList:
 
-    def test_curriculum_생성_요청(self, api_client, setup_course_data):
+    def test_curriculum_생성_요청(
+        self, api_client, setup_course_data, staff_user_token
+    ):
         # Given
         url = reverse("courses:curriculum-list")
-        api_client.login(
-            username=conftest.TEST_STAFF_USER_EMAIL,
-            password=conftest.TEST_STAFF_USER_PASSWORD,
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {staff_user_token}")
         data = {
             "name": "Test Curriculum",
             "description": "Test Description",
@@ -408,13 +403,11 @@ class TestCurriculumList:
         assert response.status_code == status.HTTP_201_CREATED
 
     def test_curriculum_생성_요청_실패_일반유저인_경우(
-        self, api_client, setup_course_data
+        self, api_client, setup_course_data, user_token
     ):
         # Given
         url = reverse("courses:curriculum-list")
-        api_client.login(
-            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
         data = {
             "name": "Test Curriculum",
             "description": "Test Description",
@@ -452,13 +445,16 @@ class TestCurriculumList:
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
 
-    def test_curriculum_목록_조회(self, api_client, setup_course_data):
+    def test_curriculum_목록_조회(
+        self, api_client, setup_course_data, create_staff_user
+    ):
         # Given
         for i in range(5):
             Curriculum.objects.create(
                 name=f"Test Curriculum {i}",
                 description="Test Description",
                 price=1000,
+                author=create_staff_user,
             )
         url = reverse("courses:curriculum-list")
         api_client.login(
@@ -470,18 +466,19 @@ class TestCurriculumList:
 
         # Then
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 5
+        assert response.data["count"] == 5
 
 
 @pytest.mark.django_db
 class TestCurriculumDetail:
 
-    def test_curriculum_조회(self, api_client, setup_course_data):
+    def test_curriculum_조회(self, api_client, setup_course_data, create_staff_user):
         # Given
         curriculum = Curriculum.objects.create(
             name="Test Curriculum",
             description="Test Description",
             price=1000,
+            author=create_staff_user,
         )
         url = reverse("courses:curriculum-detail", args=[curriculum.id])
         course = setup_course_data["course"]
@@ -503,18 +500,18 @@ class TestCurriculumDetail:
         assert response.data["updated_at"] is not None
         assert len(response.data["courses"]) == 1
 
-    def test_curriculum_수정(self, api_client, setup_course_data):
+    def test_curriculum_수정(
+        self, api_client, setup_course_data, staff_user_token, create_staff_user
+    ):
         # Given
         curriculum = Curriculum.objects.create(
             name="Test Curriculum",
             description="Test Description",
             price=1000,
+            author=create_staff_user,
         )
         url = reverse("courses:curriculum-detail", args=[curriculum.id])
-        api_client.login(
-            username=conftest.TEST_STAFF_USER_EMAIL,
-            password=conftest.TEST_STAFF_USER_PASSWORD,
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {staff_user_token}")
         data = {
             "name": "Updated Test Curriculum",
             "description": "Updated Test Description",
@@ -531,17 +528,18 @@ class TestCurriculumDetail:
         assert response.data["description"] == "Updated Test Description"
         assert response.data["price"] == 2000
 
-    def test_curriculum_수정_실패_일반유저인_경우(self, api_client, setup_course_data):
+    def test_curriculum_수정_실패_일반유저인_경우(
+        self, api_client, setup_course_data, user_token, create_staff_user
+    ):
         # Given
         curriculum = Curriculum.objects.create(
             name="Test Curriculum",
             description="Test Description",
             price=1000,
+            author=create_staff_user,
         )
         url = reverse("courses:curriculum-detail", args=[curriculum.id])
-        api_client.login(
-            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
         data = {
             "name": "Updated Test Curriculum",
             "description": "Updated Test Description",
@@ -559,13 +557,14 @@ class TestCurriculumDetail:
         }
 
     def test_curriculum_수정_실패_로그인하지않은경우(
-        self, api_client, setup_course_data
+        self, api_client, setup_course_data, create_staff_user
     ):
         # Given
         curriculum = Curriculum.objects.create(
             name="Test Curriculum",
             description="Test Description",
             price=1000,
+            author=create_staff_user,
         )
         url = reverse("courses:curriculum-detail", args=[curriculum.id])
         data = {
@@ -584,18 +583,16 @@ class TestCurriculumDetail:
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
 
-    def test_curriculum_삭제(self, api_client):
+    def test_curriculum_삭제(self, api_client, staff_user_token, create_staff_user):
         # Given
         curriculum = Curriculum.objects.create(
             name="Test Curriculum",
             description="Test Description",
             price=1000,
+            author=create_staff_user,
         )
         url = reverse("courses:curriculum-detail", args=[curriculum.id])
-        api_client.login(
-            username=conftest.TEST_STAFF_USER_EMAIL,
-            password=conftest.TEST_STAFF_USER_PASSWORD,
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {staff_user_token}")
 
         # When
         response = api_client.delete(url)
@@ -604,17 +601,18 @@ class TestCurriculumDetail:
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert Curriculum.objects.count() == 0
 
-    def test_curriculum_삭제_실패_일반유저인_경우(self, api_client):
+    def test_curriculum_삭제_실패_일반유저인_경우(
+        self, api_client, user_token, create_staff_user
+    ):
         # Given
         curriculum = Curriculum.objects.create(
             name="Test Curriculum",
             description="Test Description",
             price=1000,
+            author=create_staff_user,
         )
         url = reverse("courses:curriculum-detail", args=[curriculum.id])
-        api_client.login(
-            username=conftest.TEST_USER_EMAIL, password=conftest.TEST_USER_PASSWORD
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
 
         # When
         response = api_client.delete(url)
@@ -625,12 +623,15 @@ class TestCurriculumDetail:
             "detail": "이 작업을 수행할 권한(permission)이 없습니다."
         }
 
-    def test_curriculum_삭제_실패_로그인하지않은경우(self, api_client):
+    def test_curriculum_삭제_실패_로그인하지않은경우(
+        self, api_client, create_staff_user
+    ):
         # Given
         curriculum = Curriculum.objects.create(
             name="Test Curriculum",
             description="Test Description",
             price=1000,
+            author=create_staff_user,
         )
         url = reverse("courses:curriculum-detail", args=[curriculum.id])
 
@@ -643,13 +644,14 @@ class TestCurriculumDetail:
             "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
         }
 
-    def test_curriculum_수정_실패_존재하지않는_curriculum인_경우(self, api_client):
+    def test_curriculum_수정_실패_존재하지않는_curriculum인_경우(
+        self,
+        api_client,
+        staff_user_token,
+    ):
         # Given
         url = reverse("courses:curriculum-detail", args=[1])
-        api_client.login(
-            username=conftest.TEST_STAFF_USER_EMAIL,
-            password=conftest.TEST_STAFF_USER_PASSWORD,
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {staff_user_token}")
         data = {
             "name": "Updated Test Curriculum",
             "description": "Updated Test Description",

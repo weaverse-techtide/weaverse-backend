@@ -1,14 +1,126 @@
 from django.contrib.auth.hashers import check_password
+from materials.models import Image
+from materials.serializers import ImageSerializer
 from rest_framework import serializers
 
 from .models import CustomUser
 
 
-class CustomUserSerializer(serializers.ModelSerializer):
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    """
+    회원가입을 위한 시리얼라이저입니다.
+    """
+
+    confirm_password = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = CustomUser
+        fields = ["email", "nickname", "password", "confirm_password"]
+        extra_kwargs = {
+            "password": {"write_only": True},
+            "confirm_password": {"write_only": True},
+        }
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    """
+    비밀번호 재설정을 위한 시리얼라이저입니다.
+    - 현재 비밀번호와 새로운 비밀번호를 받아 비밀번호를 변경합니다.
+    """
+
+    current_password = serializers.CharField(write_only=True, required=True)
+    new_password = serializers.CharField(write_only=True, required=True)
+    confirm_new_password = serializers.CharField(write_only=True, required=True)
+
+    def validate_new_password(self, value):
+        """
+        새로운 비밀번호의 복잡성을 검증합니다.
+        """
+        if len(value) < 8:
+            raise serializers.ValidationError(
+                {"password": "비밀번호는 8 글자 이상이어야 합니다."}
+            )
+        if not any(char.isdigit() for char in value):
+            raise serializers.ValidationError(
+                {"password": "1개 이상의 숫자를 포함해야 합니다. "}
+            )
+        if not any(char.isupper() for char in value):
+            raise serializers.ValidationError(
+                {"password": "1개 이상의 대문자를 포함해야 합니다."}
+            )
+        if not any(char in r"!@#$%^&*()-_=+[{]}\|;:'\",<.>/?`~" for char in value):
+            raise serializers.ValidationError(
+                {"password": "1개 이상의 특수 문자를 포함해야 합니다."}
+            )
+        return value
+
+    def validate(self, data):
+        """
+        새로운 비밀번호와 확인 비밀번호가 일치하는지 검증하고 반환합니다.
+        """
+        new_password = data.get("new_password")
+        confirm_new_password = data.get("confirm_new_password")
+        if (
+            new_password
+            and confirm_new_password
+            and new_password != confirm_new_password
+        ):
+            raise serializers.ValidationError("새 비밀번호가 일치하지 않습니다.")
+
+        user = self.context["request"].user
+        if user.check_password(new_password):
+            raise serializers.ValidationError(
+                "이전과 동일한 비밀번호를 사용할 수 없습니다."
+            )
+        return data
+
+    def validate_current_password(self, value):
+        """
+        현재 비밀번호가 맞는지 검증하고 그 값을 반환합니다.
+        """
+        user = self.context["request"].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("기존 비밀번호가 올바르지 않습니다.")
+        return value
+
+    def save(self, **kwargs):
+        """
+        비밀번호를 재설정합니다.
+        - 어떠한 데이터도 직렬화하여 반환하지 않는 대신 업데이트된 사용자 객체를 반환합니다.
+        """
+        user = self.context["request"].user
+        new_password = self.validated_data["new_password"]
+
+        user.set_password(new_password)
+        user.save()
+        return user
+
+
+class StudentListSerializer(serializers.ModelSerializer):
+    """
+    학생 목록을 위한 시리얼라이저입니다.
+    """
+
+    class Meta:
+        model = CustomUser
+        fields = ["id", "email", "nickname", "created_at"]
+        read_only_fields = ["id", "email", "nickname", "created_at"]
+
+
+class TutorListSerializer(serializers.ModelSerializer):
+    """
+    강사 목록을 위한 시리얼라이저입니다.
+    """
+
+    class Meta:
+        model = CustomUser
+        fields = ["id", "email", "nickname", "created_at"]
+        read_only_fields = ["id", "email", "nickname", "created_at"]
+
+
+class CustomUserDetailSerializer(serializers.ModelSerializer):
     """
     커스텀 사용자의 시리얼라이저입니다.
-    - 데이터 직렬화를 담당합니다.
-    - 데이터 역직렬화를 담당합니다.
     """
 
     confirm_password = serializers.CharField(write_only=True, required=True)
@@ -17,16 +129,33 @@ class CustomUserSerializer(serializers.ModelSerializer):
     student_count = serializers.SerializerMethodField()
     tutor_count = serializers.SerializerMethodField()
 
+    profile_image = ImageSerializer(required=False)
+
     class Meta:
         model = CustomUser
-        fields = "__all__"
-        exclude = ["is_superuser"]
+        fields = [
+            "id",
+            "email",
+            "nickname",
+            "password",
+            "confirm_password",
+            "profile_image",
+            "is_active",
+            "is_staff",
+            "is_superuser",
+            "students",
+            "user_type",
+            "student_count",
+            "tutor_count",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = [
             "id",
             "is_active",
             "is_staff",
-            "date_joined",
-            "tutor",
+            "is_superuser",
+            "students",
             "user_type",
             "student_count",
             "tutor_count",
@@ -67,6 +196,20 @@ class CustomUserSerializer(serializers.ModelSerializer):
             return CustomUser.objects.filter(is_staff=True, is_superuser=False).count()
         return None
 
+    def validate_nickname(self, value):
+        """
+        닉네임 필드의 데이터를 검증합니다.
+        """
+        if (
+            CustomUser.objects.filter(nickname=value)
+            .exclude(id=self.instance.id if self.instance else None)
+            .exists()
+        ):
+            raise serializers.ValidationError(
+                {"nickname": "사용할 수 없는 닉네임입니다."}
+            )
+        return value
+
     def validate_email(self, value):
         """
         이메일 필드의 데이터를 검증합니다.
@@ -95,9 +238,23 @@ class CustomUserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"password": "1개 이상의 대문자를 포함해야 합니다."}
             )
-        if not any(char in "!@#$%^&*()-_=+[{]}\|;:'\",<.>/?`~" for char in value):
+        if not any(char in r"!@#$%^&*()-_=+[{]}\|;:'\",<.>/?`~" for char in value):
             raise serializers.ValidationError(
                 {"password": "1개 이상의 특수 문자를 포함해야 합니다."}
+            )
+        return value
+
+    def validate_nickname(self, value):
+        """
+        닉네임 필드의 데이터를 검증합니다.
+        """
+        if (
+            CustomUser.objects.filter(nickname=value)
+            .exclude(id=self.instance.id if self.instance else None)
+            .exists()
+        ):
+            raise serializers.ValidationError(
+                {"nickname": "이미 존재하는 닉네임입니다."}
             )
         return value
 
@@ -110,9 +267,9 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
         password = data.get("password")
         confirm_password = data.get("confirm_password")
+
         if password and confirm_password and password != confirm_password:
             raise serializers.ValidationError("비밀번호가 일치하지 않습니다.")
-
         if (
             self.instance
             and password
@@ -121,7 +278,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"password": "이전과 동일한 비밀번호를 사용할 수 없습니다."}
             )
-
         return data
 
     def create(self, validated_data):
@@ -132,8 +288,12 @@ class CustomUserSerializer(serializers.ModelSerializer):
         try:
             password = validated_data.pop("password", None)
             validated_data.pop("confirm_password")
+            profile_image = validated_data.pop("profile_image", None)
+
             user = CustomUser.objects.create_user(password=password, **validated_data)
 
+            if profile_image:
+                Image.objects.create(user=user, **profile_image)
             return user
         except Exception as e:
             raise serializers.ValidationError("사용자 생성 중 오류가 발생했습니다.")
@@ -146,11 +306,23 @@ class CustomUserSerializer(serializers.ModelSerializer):
             password = validated_data.pop("password", None)
             validated_data.pop("confirm_password", None)
 
+            profile_image = validated_data.pop("profile_image", None)
+
             user = super().update(instance, validated_data)
 
+            # 업데이트에 비밀번호가 있는 경우
             if password:
                 user.set_password(password)
                 user.save()
+            
+            # 업데이트에 프로필 이미지가 있는 경우
+            if profile_image:
+                if hasattr(user, 'image'):
+                    for attr, value in profile_image.items():
+                        setattr(user.image, attr, value)
+                    user.image.save() 
+                else:
+                    Image.objects.create(user=user, **profile_image)
             return user
         except Exception as e:
             raise serializers.ValidationError("사용자 업데이트 중 오류가 발생했습니다.")
@@ -176,77 +348,3 @@ class CustomUserSerializer(serializers.ModelSerializer):
             representation.pop("tutor", None)
 
         return representation
-
-
-class PasswordResetSerializer(serializers.Serializer):
-    """
-    비밀번호 재설정을 위한 시리얼라이저입니다.
-    - 현재 비밀번호와 새로운 비밀번호를 받아 비밀번호를 변경합니다.
-    """
-
-    current_password = serializers.CharField(write_only=True, required=True)
-    new_password = serializers.CharField(write_only=True, required=True)
-    confirm_new_password = serializers.CharField(write_only=True, required=True)
-
-    def validate_new_password(self, value):
-        """
-        새로운 비밀번호의 복잡성을 검증합니다.
-        """
-        if len(value) < 8:
-            raise serializers.ValidationError(
-                {"password": "비밀번호는 8 글자 이상이어야 합니다."}
-            )
-        if not any(char.isdigit() for char in value):
-            raise serializers.ValidationError(
-                {"password": "1개 이상의 숫자를 포함해야 합니다. "}
-            )
-        if not any(char.isupper() for char in value):
-            raise serializers.ValidationError(
-                {"password": "1개 이상의 대문자를 포함해야 합니다."}
-            )
-        if not any(char in "!@#$%^&*()-_=+[{]}\|;:'\",<.>/?`~" for char in value):
-            raise serializers.ValidationError(
-                {"password": "1개 이상의 특수 문자를 포함해야 합니다."}
-            )
-        return value
-
-    def validate(self, data):
-        """
-        새로운 비밀번호와 확인 비밀번호가 일치하는지 검증하고 반환합니다.
-        """
-        new_password = data.get("new_password")
-        confirm_new_password = data.get("confirm_new_password")
-        if (
-            new_password
-            and confirm_new_password
-            and new_password != confirm_new_password
-        ):
-            raise serializers.ValidationError("새 비밀번호가 일치하지 않습니다.")
-
-        user = self.context["request"].user
-        if user.check_password(new_password):
-            raise serializers.ValidationError(
-                "이전과 동일한 비밀번호를 사용할 수 없습니다."
-            )
-        return data
-
-    def validate_current_password(self, value):
-        """
-        현재 비밀번호가 맞는지 검증하고 그 값을 반환합니다.
-        """
-        user = self.context["request"].user
-        if not user.check_password(value):
-            raise serializers.ValidationError("현재 비밀번호가 올바르지 않습니다.")
-        return value
-
-    def save(self, **kwargs):
-        """
-        비밀번호를 재설정합니다.
-        - 어떠한 데이터도 직렬화하여 반환하지 않는 대신 업데이트된 사용자 객체를 반환합니다.
-        """
-        user = self.context["request"].user
-        new_password = self.validated_data["new_password"]
-
-        user.set_password(new_password)
-        user.save()
-        return user

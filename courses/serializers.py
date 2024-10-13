@@ -16,11 +16,10 @@ class AssignmentSerializer(serializers.ModelSerializer):
     Assignment 모델을 위한 Serializer입니다
     """
 
-    id = serializers.IntegerField(read_only=True)
-
     class Meta:
         model = Assignment
-        fields = ["id", "question", "created_at", "updated_at"]
+        fields = ["question", "created_at", "updated_at", "id"]
+        read_only_fields = ["created_at", "updated_at", "id"]
 
 
 class MultipleChoiceQuestionChoiceSerializer(serializers.ModelSerializer):
@@ -28,11 +27,10 @@ class MultipleChoiceQuestionChoiceSerializer(serializers.ModelSerializer):
     MultipleChoiceQuestionChoice 모델을 위한 Serializer입니다
     """
 
-    id = serializers.IntegerField(read_only=True)
-
     class Meta:
         model = MultipleChoiceQuestionChoice
-        fields = ["id", "choice", "is_correct", "created_at", "updated_at"]
+        fields = ["id", "choice", "is_correct", "created_at", "updated_at", "id"]
+        read_only_fields = ["created_at", "updated_at", "id"]
 
 
 class MultipleChoiceQuestionSerializer(serializers.ModelSerializer):
@@ -41,7 +39,6 @@ class MultipleChoiceQuestionSerializer(serializers.ModelSerializer):
     """
 
     multiple_choice_question_choices = MultipleChoiceQuestionChoiceSerializer(many=True)
-    id = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = MultipleChoiceQuestion
@@ -52,6 +49,7 @@ class MultipleChoiceQuestionSerializer(serializers.ModelSerializer):
             "updated_at",
             "multiple_choice_question_choices",
         ]
+        read_only_fields = ["created_at", "updated_at", "id"]
 
 
 class TopicSerializer(serializers.ModelSerializer):
@@ -59,9 +57,11 @@ class TopicSerializer(serializers.ModelSerializer):
     Topic 모델을 위한 Serializer입니다
     """
 
-    id = serializers.IntegerField(read_only=True)
     multiple_choice_question = MultipleChoiceQuestionSerializer(required=False)
     assignment = AssignmentSerializer(required=False)
+    video_url = serializers.SerializerMethodField()
+    video_id = serializers.IntegerField(write_only=True, required=False)
+    video_duration = serializers.SerializerMethodField()
 
     class Meta:
         model = Topic
@@ -69,14 +69,33 @@ class TopicSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "type",
-            "description",
             "order",
             "is_premium",
             "created_at",
             "updated_at",
             "multiple_choice_question",
             "assignment",
+            "video_url",
+            "video_id",
+            "video_duration",
         ]
+        read_only_fields = [
+            "created_at",
+            "updated_at",
+            "id",
+            "video_url",
+            "video_duration",
+        ]
+
+    def get_video_url(self, obj):
+        if getattr(obj, "video", None):
+            return obj.video.video_url
+        return None
+
+    def get_video_duration(self, obj):
+        if getattr(obj, "video", None):
+            return 0
+        return None
 
 
 class LectureSerializer(serializers.ModelSerializer):
@@ -84,12 +103,12 @@ class LectureSerializer(serializers.ModelSerializer):
     Lecture 모델을 위한 Serializer입니다
     """
 
-    id = serializers.IntegerField(read_only=True)
     topics = TopicSerializer(many=True)
 
     class Meta:
         model = Lecture
         fields = ["id", "title", "order", "created_at", "updated_at", "topics"]
+        read_only_fields = ["created_at", "updated_at", "id"]
 
 
 class CourseDetailSerializer(serializers.ModelSerializer):
@@ -97,11 +116,18 @@ class CourseDetailSerializer(serializers.ModelSerializer):
     Course 모델을 위한 Serializer입니다
     """
 
-    id = serializers.IntegerField(read_only=True)
+    video_id = serializers.IntegerField(write_only=True)
+    thumbnail_id = serializers.IntegerField(write_only=True)
     lectures = LectureSerializer(
         many=True,
         required=False,
     )
+    video_url = serializers.SerializerMethodField()
+    thumbnail_url = serializers.SerializerMethodField()
+    author_image = serializers.SerializerMethodField()
+    author_name = serializers.SerializerMethodField()
+    author_id = serializers.SerializerMethodField()
+    author_introduction = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
@@ -114,9 +140,55 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "lectures",
-            "course_level",
+            "skill_level",
             "price",
+            "thumbnail_id",
+            "video_id",
+            "video_url",
+            "thumbnail_url",
+            "author_image",
+            "author_name",
+            "author_id",
+            "author_introduction",
         ]
+        read_only_fields = [
+            "created_at",
+            "updated_at",
+            "id",
+            "video_url",
+            "thumbnail_url",
+            "author_image",
+            "author_name",
+            "author_id",
+            "author_introduction",
+        ]
+
+    def get_author_image(self, obj):
+        print(obj.author.image.image_url)
+        if getattr(obj.author, "image", None):
+            return obj.author.image.image_url
+        return None
+
+    def get_author_name(self, obj):
+        return obj.author.nickname
+
+    def get_video_url(self, obj):
+        if getattr(obj, "video", None):
+            return obj.video.video_url
+        return None
+
+    def get_thumbnail_url(self, obj):
+        if getattr(obj, "thumbnail", None):
+            return obj.thumbnail.url
+        return None
+
+    def get_author_id(self, obj):
+        return obj.author.id
+
+    def get_author_introduction(self, obj):
+        return (
+            obj.author.introduction if obj.author.introduction else "소개가 없습니다."
+        )
 
 
 class CourseSummarySerializer(serializers.ModelSerializer):
@@ -124,7 +196,10 @@ class CourseSummarySerializer(serializers.ModelSerializer):
     Course 모델을 위한 Serializer입니다
     """
 
-    id = serializers.IntegerField(read_only=True)
+    lectures_count = serializers.SerializerMethodField()
+    thumbnail = serializers.SerializerMethodField()
+    author_image = serializers.SerializerMethodField()
+    author_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
@@ -135,8 +210,33 @@ class CourseSummarySerializer(serializers.ModelSerializer):
             "category",
             "created_at",
             "updated_at",
-            "course_level",
+            "skill_level",
+            "lectures_count",
+            "thumbnail",
+            "author_image",
+            "author_name",
         ]
+        read_only_fields = [
+            "created_at",
+            "updated_at",
+            "id",
+            "lectures_count",
+            "thumbnail",
+            "author_image",
+            "author_name",
+        ]
+
+    def get_lectures_count(self, obj):
+        return obj.lectures.count()
+
+    def get_thumbnail(self, obj):
+        return obj.get_thumbnail()
+
+    def get_author_image(self, obj):
+        return "https://paullab.co.kr/images/weniv-licat.png"
+
+    def get_author_name(self, obj):
+        return obj.author.nickname
 
 
 class CurriculumReadSerializer(serializers.ModelSerializer):
@@ -144,7 +244,6 @@ class CurriculumReadSerializer(serializers.ModelSerializer):
     Curriculum 모델을 조회하기 위한 Serializer입니다. 직렬화 할 때만 사용합니다.
     """
 
-    id = serializers.IntegerField(read_only=True)
     courses = CourseSummarySerializer(
         many=True,
     )
@@ -160,6 +259,7 @@ class CurriculumReadSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+        read_only_fields = ["created_at", "updated_at", "id"]
 
 
 class CurriculumCreateAndUpdateSerializer(serializers.ModelSerializer):
@@ -167,7 +267,6 @@ class CurriculumCreateAndUpdateSerializer(serializers.ModelSerializer):
     Curriculum 모델을 생성 및 수정을 위한 Serializer입니다. 역직렬화 할 때만 사용합니다.
     """
 
-    id = serializers.IntegerField(required=False)
     courses_ids = serializers.ListField(
         child=serializers.IntegerField(), write_only=True
     )
@@ -175,6 +274,7 @@ class CurriculumCreateAndUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Curriculum
         fields = ["id", "name", "price", "description", "courses_ids"]
+        read_only_fields = ["created_at", "updated_at", "id"]
 
 
 class CurriculumSummarySerializer(serializers.ModelSerializer):
@@ -182,7 +282,9 @@ class CurriculumSummarySerializer(serializers.ModelSerializer):
     Curriculum 모델을 위한 Serializer입니다. 직렬화 할 때만 사용합니다.
     """
 
-    id = serializers.IntegerField(read_only=True)
+    author_image = serializers.SerializerMethodField()
+    author_name = serializers.SerializerMethodField()
+    courses_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Curriculum
@@ -192,4 +294,30 @@ class CurriculumSummarySerializer(serializers.ModelSerializer):
             "price",
             "created_at",
             "updated_at",
+            "author_image",
+            "author_name",
+            "category",
+            "skill_level",
+            "description",
+            "courses_count",
         ]
+        read_only_fields = [
+            "created_at",
+            "updated_at",
+            "id",
+            "author_image",
+            "author_name",
+            "category",
+            "skill_level",
+            "description",
+            "courses_count",
+        ]
+
+    def get_author_image(self, obj):
+        return "https://paullab.co.kr/images/weniv-licat.png"
+
+    def get_author_name(self, obj):
+        return obj.author.nickname
+
+    def get_courses_count(self, obj):
+        return obj.courses.count()

@@ -42,6 +42,8 @@ class Image(models.Model):
         on_delete=models.CASCADE,
         related_name="images",
         verbose_name="이미지를 등록한 사용자",
+        null=True,
+        blank=True,
     )
     image_url = models.URLField(verbose_name="이미지 파일")
     created_at = models.DateTimeField(auto_now_add=True)

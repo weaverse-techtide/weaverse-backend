@@ -14,8 +14,12 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from .models import Image, Video, VideoEventData
-from .serializers import (ImageSerializer, UserViewEventListSerializer,
-                          VideoEventSerializer, VideoSerializer)
+from .serializers import (
+    ImageSerializer,
+    UserViewEventListSerializer,
+    VideoEventSerializer,
+    VideoSerializer,
+)
 
 
 # 리팩토링할 때 중복 함수 이곳에 작성
@@ -134,9 +138,6 @@ class ImageListCreateView(generics.ListCreateAPIView):
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
     permission_classes = [permissions.IsAuthenticated]
-
-    def perform_create(self, serializer):
-        serializer.save(course_id=self.request.data.get("course_id"))
 
 
 class ImageRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
@@ -307,9 +308,6 @@ class VideoListCreateView(generics.ListCreateAPIView):
     queryset = Video.objects.all()
     serializer_class = VideoSerializer
     permission_classes = [IsTutor | IsSuperUser]
-
-    def perform_create(self, serializer):
-        serializer.save(topic_id=self.request.data.get("topic_id"))
 
 
 class VideoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):

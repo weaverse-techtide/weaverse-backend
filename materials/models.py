@@ -1,9 +1,27 @@
+import uuid
+
 from accounts.models import CustomUser
 from courses.models import Course, Topic
 from django.db import models
 
 
+def upload_to(instance, filename):
+    """
+    ImageField를 통해 파일이 업로드될 때 해당 파일의 저장 경로를 동적으로 생성합니다.
+    - 모델 인스턴스가 save() 호출될 때, 파일이 저장되기 전 upload_to에 정의된 경로를 생성하기 위해 호출됩니다.
+    - ImageField의 upload_to 인자로 전달됩니다.
+    - 생성된 경로를 반환하며, 이 경로는 Django가 해당 파일을 저장할 때 사용됩니다.
+    - (장점) 사용자 접근성을 높이면서 중복 파일 이름 문제를 해결합니다. 
+    """
+    ext = filename.split(".")[-1]
+    return f"images/{uuid.uuid4()}.{ext}"
+
+
 class Image(models.Model):
+    """
+    이미지 객체를 위해 작성된 모델입니다.
+    """
+
     course = models.OneToOneField(
         Course,
         on_delete=models.CASCADE,
@@ -18,30 +36,34 @@ class Image(models.Model):
         null=True,
         blank=True,
     )
-    title = models.CharField(max_length=255, verbose_name="이미지 제목")
-    file = models.ImageField(upload_to="images/", verbose_name="이미지 파일")
+    image_url = models.URLField(
+        upload_to="images/", blank=True, null=True, verbose_name="이미지 파일"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.topic.title} - {self.title}"
-
-    # 실제 이미지 파일
-    image = models.ImageField(upload_to="images/", blank=True, null=True)
+        if self.user:
+            return f"{self.user}'s Image"
+        elif self.course:
+            return f"Course Image for {self.course}"
+        return "Image"
 
     def save(self, *args, **kwargs):
 
-        if self.user and not self.file:
-            self.file = "images/default_user_image.jpg"
-        if self.course and not self.file:
-            self.file = "images/default_course_image.jpg"
+        if self.user and not self.image_url:
+            self.image_url = "images/default_user_image.jpg"
+        if self.course and not self.image_url:
+            self.image_url = "images/default_course_image.jpg"
         super().save(*args, **kwargs)
 
 
 class Video(models.Model):
     topic = models.OneToOneField(Topic, on_delete=models.CASCADE, related_name="video")
-    title = models.CharField(max_length=255, verbose_name="비디오 제목")
-    file = models.FileField(upload_to="videos/", verbose_name="비디오 파일")
+    course = models.OneToOneField(
+        Course, on_delete=models.CASCADE, related_name="video"
+    )
+    video_url = models.FileField(upload_to="videos/", verbose_name="비디오 파일")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -56,11 +78,18 @@ class VideoEventData(models.Model):
         ("leave", "Left Page"),
     ]
 
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name="video_event_datas",
+        verbose_name="시청 기록의 해당 사용자",
+    )
+
     video = models.ForeignKey(
         Video,
         on_delete=models.CASCADE,
         related_name="video_event_datas",
-        verbose_name="해당 비디오",
+        verbose_name="시청 기록의 해당 비디오",
     )
 
     event_type = models.CharField(

@@ -28,13 +28,8 @@ urlpatterns = [
         name="video-event-data",
     ),
     path(
-        "video/<int:video_id>/events",
-        views.VideoEventListView.as_view(),
-        name="video-event-list",
-    ),
-    path(
         "users/<int:user_id>/videos/<int:video_id>/watch-history/",
-        views.WatchHistoryRetrieveUpdateView.as_view(),
-        name="watch-history",
+        views.UserVideoEventListView.as_view(),
+        name="video-event-list",
     ),
 ]

@@ -6,42 +6,34 @@ from .models import Image, Video, VideoEventData
 
 
 class ImageSerializer(serializers.ModelSerializer):
+    """
+    이미지 생성(업로드)을 위한 시리얼라이저입니다.
+    - 형식, 손상 여부에 대해 유효성 검사를 합니다. 
+    """
 
     class Meta:
         model = Image
         fields = [
             "id",
-            "title",
-            "file",
+            "image_url",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
-    def validate_file(self, value):
-        # 이미지 형식과 크기 유효성 검사
+    def validate_image_url(self, value):
         allowed_image_extensions = (".png", ".jpg", ".jpeg")
-        max_image_size = 5 * 1024 * 1024  # 5MB
 
         if not value.name.endswith(allowed_image_extensions):
             raise serializers.ValidationError(
                 "지원하지 않는 파일 형식입니다. PNG, JPG, JPEG만 가능합니다."
             )
 
-        if value.size > max_image_size:
-            raise serializers.ValidationError("파일 크기는 5MB를 초과할 수 없습니다.")
-
-        # 이미지 손상 여부 검사
         try:
             img = PILImage.open(value)
             img.verify()
         except Exception:
             raise serializers.ValidationError("유효한 이미지 파일이 아닙니다.")
-
-        # 중복 파일명 검사
-        user = self.context["request"].user
-        if Image.objects.filter(user=user, file__exact=value.name).exists():
-            raise serializers.ValidationError("이미 존재하는 파일명입니다.")
 
         return value
 
@@ -57,8 +49,7 @@ class VideoSerializer(serializers.ModelSerializer):
             "topic",
             "topic_title",
             "course_title",
-            "title",
-            "file",
+            "video_url",
             "created_at",
             "updated_at",
         ]
@@ -73,7 +64,7 @@ class VideoSerializer(serializers.ModelSerializer):
                 )
         return value
 
-    def validate_file(self, value):
+    def validate_image_url(self, value):
         # 영상 형식과 크기 유효성 검사
         allowed_extensions = ["mp4", "avi", "mov", "wmv"]
         max_size = 100 * 1024 * 1024  # 100MB
@@ -169,10 +160,23 @@ class VideoEventSerializer(serializers.ModelSerializer):
         return video_event_data
 
 
-class ViewEventListSerializer(serializers.ModelSerializer):
-    pass
+class UserViewEventListSerializer(serializers.ModelSerializer):
+    duration_in_minutes = serializers.SerializerMethodField()
+    current_time_in_minutes = serializers.SerializerMethodField()
 
+    class Meta:
+        model = VideoEventData
+        fields = [
+            "event_type",
+            "duration",
+            "current_time",
+            "timestamp",
+            "duration_in_minutes",  # 분과 초로 변환된 전체 재생시간
+            "current_time_in_minutes",  # 분과 초로 변환된 현재 시간
+        ]
 
-class WatchHistorySerializer(serializers.Serializer):
+    def get_duration_in_minutes(self, obj):
+        return obj.get_duration_in_minutes()
 
-    pass
+    def get_current_time_in_minutes(self, obj):
+        return obj.get_current_time_in_minutes()

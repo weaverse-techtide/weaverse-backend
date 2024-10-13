@@ -32,6 +32,11 @@ urlpatterns = [
         PaymentView.as_view(),
         name="payment",
     ),
+    path(
+        "payments/<int:order_id>/cancel/",
+        PaymentView.as_view(),
+        name="payment-cancel",
+    ),
     # 영수증 관련 URLs
     path("receipts/", ReceiptView.as_view(), name="receipt-list"),
     path(

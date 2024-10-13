@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, extend_schema_view
 
-from .models import CartItem, Order, UserBillingAddress
+from .models import CartItem, Order, UserBillingAddress, Payment
 from .serializers import (
     CartItemSerializer,
     CartSerializer,
@@ -254,7 +254,7 @@ class PaymentView(PaymentMixin, OrderMixin, generics.GenericAPIView):
 
     [POST /payments/]: 현재 진행 중인 주문에 대한 결제를 생성하고 카카오페이 결제를 요청합니다.
     [GET /payments/]: 카카오페이 결제 결과를 처리합니다.
-    [DELETE /payments/]: 결제를 취소하고 환불을 처리합니다.
+    [DELETE /payments/<order_id>/cancel/]: 결제를 취소하고 환불을 처리합니다.
     """
 
     serializer_class = PaymentSerializer
@@ -265,7 +265,7 @@ class PaymentView(PaymentMixin, OrderMixin, generics.GenericAPIView):
 
     @transaction.atomic
     def post(self, request):
-        order = self.get_queryset().select_for_update().first()
+        order = self.get_queryset().filter(order_status="pending").select_for_update().first()
         if not order:
             return Response(
                 {"detail": "진행 중인 주문이 없습니다."},
@@ -290,14 +290,35 @@ class PaymentView(PaymentMixin, OrderMixin, generics.GenericAPIView):
 
     @transaction.atomic
     def get(self, request):
-        order = self.get_queryset().select_for_update().first()
+        order = (
+            self.get_queryset()
+            .filter(order_status="pending")
+            .select_for_update()
+            .first()
+        )
         if not order:
             return Response(
                 {"detail": "진행 중인 주문이 없습니다."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        payment = self.get_payment(request.user, order=order)
+        # 가장 최근의 pending payment를 가져오고 나머지는 취소 처리
+        payments = list(
+            Payment.objects.filter(order=order, payment_status="pending").order_by(
+                "-created_at"
+            )
+        )
+        if not payments:
+            return Response(
+                {"detail": "해당 주문에 대한 대기 중인 결제를 찾을 수 없습니다."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        payment = payments[0]
+        # 가장 최근의 pending payment를 제외한 나머지 payment를 취소 처리
+        if len(payments) > 1:
+            Payment.objects.filter(id__in=[p.id for p in payments[1:]]).update(
+                payment_status="cancelled"
+            )
 
         result = request.GET.get("result")
         pg_token = request.GET.get("pg_token")
@@ -339,11 +360,14 @@ class PaymentView(PaymentMixin, OrderMixin, generics.GenericAPIView):
             )
 
     @transaction.atomic
-    def delete(self, request):
-        order = self.get_queryset().select_for_update().first()
-        if not order:
+    def delete(self, request, order_id):
+        try:
+            order = (
+                self.get_queryset().filter(order_status="completed").get(id=order_id)
+            )
+        except Order.DoesNotExist:
             return Response(
-                {"detail": "진행 중인 주문이 없습니다."},
+                {"detail": "결제된 주문을 찾을 수 없습니다."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 

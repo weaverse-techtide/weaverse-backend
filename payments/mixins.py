@@ -206,8 +206,11 @@ class PaymentMixin(GetObjectMixin):
         if not payment or payment.payment_status != "completed":
             raise ValidationError("해당 주문에 대한 완료된 결제를 찾을 수 없습니다.")
 
+        if payment.paid_at is None:
+            raise ValidationError("결제 완료 시간이 기록되지 않았습니다.")
+
         if timezone.now() - payment.paid_at > timezone.timedelta(days=7):
-            raise ValidationError("결제 후 7일이 지나 취소할 수 없습니다.")
+            raise ValidationError("결제 후 7일이 지난 주문은 환불할 수 없습니다.")
 
         try:
             self.kakao_pay_service.refund_payment(payment)

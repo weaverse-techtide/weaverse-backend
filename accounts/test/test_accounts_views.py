@@ -89,7 +89,7 @@ class TestPasswordResetView:
             "confirm_new_password": "confirmnewpassword",
         }
         response = api_client.post(url, data)
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
@@ -113,7 +113,7 @@ class TestStudentListView:
     def test_student_list_view_unauthenticated(self, api_client):
         url = reverse("accounts:student-list")
         response = api_client.get(url)
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db

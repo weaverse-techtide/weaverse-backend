@@ -11,13 +11,14 @@ from courses.models import (
     Topic,
 )
 from jwtauth.utils.token_generator import generate_access_token
+from materials.models import Image, Video
 
 # 테스트에서 사용할 상수를 정의합니다.
 COURSE_TITLE = "Test Course"
 COURSE_SHORT_DESCRIPTION = "Test Course"
 COURSE_DESCRIPTION = {}
 COURSE_CATEGORY = "JavaScript"
-COURSE_COURSE_LEVEL = "beginner"
+COURSE_SKILL_LEVEL = "beginner"
 COURSE_PRICE = 10000
 LECTURE1_TITLE = "Test Lecture 1"
 LECTURE1_ORDER = 1
@@ -46,17 +47,18 @@ TEST_STAFF_USER_PASSWORD = "staffpass"
 
 
 @pytest.fixture
-def setup_course_data():
+def setup_course_data(create_staff_user):
     """
     테스트에서 사용할 Course, Lecture, Topic, Assignment, MultipleChoiceQuestion, MultipleChoiceQuestionChoice 인스턴스를 생성합니다.
     """
 
     course = Course.objects.create(
         title=COURSE_TITLE,
+        author=create_staff_user,
         short_description=COURSE_SHORT_DESCRIPTION,
         description=COURSE_DESCRIPTION,
         category=COURSE_CATEGORY,
-        course_level=COURSE_COURSE_LEVEL,
+        skill_level=COURSE_SKILL_LEVEL,
         price=COURSE_PRICE,
     )
     lecture1 = Lecture.objects.create(
@@ -71,7 +73,6 @@ def setup_course_data():
         title=TOPIC1_TITLE,
         lecture=lecture1,
         type=TOPIC1_TYPE,
-        description=TOPIC1_DESCRIPTION,
         order=1,
         is_premium=True,
     )
@@ -79,7 +80,6 @@ def setup_course_data():
         title=TOPIC2_TITLE,
         lecture=lecture2,
         type=TOPIC2_TYPE,
-        description=TOPIC2_DESCRIPTION,
         order=TOPIC2_ORDER,
         is_premium=True,
     )
@@ -133,19 +133,23 @@ def api_client():
 
 @pytest.fixture(autouse=True)
 def create_user():
-    return User.objects.create_user(
+    user = User.objects.create_user(
         email=TEST_USER_EMAIL, password=TEST_USER_PASSWORD, nickname="testuser"
     )
+    Image.objects.create(user=user, url="test.jpg")
+    return user
 
 
 @pytest.fixture(autouse=True)
 def create_staff_user():
-    return User.objects.create_user(
+    user = User.objects.create_user(
         email=TEST_STAFF_USER_EMAIL,
         password=TEST_STAFF_USER_PASSWORD,
         is_staff=True,
         nickname="staffuser",
     )
+    Image.objects.create(user=user, url="test.jpg")
+    return user
 
 
 @pytest.fixture()
@@ -156,3 +160,10 @@ def user_token(create_user):
 @pytest.fixture()
 def staff_user_token(create_staff_user):
     return generate_access_token(create_staff_user)
+
+
+@pytest.fixture
+def create_video():
+    return Video.objects.create(
+        video_url="https://www.youtube.com/watch?v=123456",
+    )

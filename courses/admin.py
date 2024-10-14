@@ -4,6 +4,7 @@ from django.contrib import admin
 from .models import (
     Assignment,
     Course,
+    Curriculum,
     Lecture,
     MultipleChoiceQuestion,
     MultipleChoiceQuestionChoice,
@@ -17,3 +18,4 @@ if settings.DEBUG:
     admin.site.register(Assignment)
     admin.site.register(MultipleChoiceQuestion)
     admin.site.register(MultipleChoiceQuestionChoice)
+    admin.site.register(Curriculum)

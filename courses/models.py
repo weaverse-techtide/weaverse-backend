@@ -113,8 +113,8 @@ class Course(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
 
     def get_thumbnail(self):
-        if hasattr(self, "images") and self.images.exists():
-            return self.images.first().file.url
+        if hasattr(self, "image"):
+            return self.image.url
         return "https://www.gravatar.com/avatar/205e460b479e2e5b48aec077"
 
     def update(self, **kwargs):

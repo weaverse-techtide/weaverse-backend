@@ -136,7 +136,7 @@ def create_user():
     user = User.objects.create_user(
         email=TEST_USER_EMAIL, password=TEST_USER_PASSWORD, nickname="testuser"
     )
-    Image.objects.create(user=user, image_url="test.jpg")
+    Image.objects.create(user=user, url="test.jpg")
     return user
 
 
@@ -148,7 +148,7 @@ def create_staff_user():
         is_staff=True,
         nickname="staffuser",
     )
-    Image.objects.create(user=user, image_url="test.jpg")
+    Image.objects.create(user=user, url="test.jpg")
     return user
 
 

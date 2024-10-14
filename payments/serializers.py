@@ -75,6 +75,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
     주문 상품 모델의 시리얼라이저입니다.
     """
 
+    thumbnail = serializers.SerializerMethodField()
+
     class Meta:
         model = OrderItem
         fields = [
@@ -89,13 +91,21 @@ class OrderItemSerializer(serializers.ModelSerializer):
             "get_item_name",
             "get_price",
             "get_image_url",
+            "thumbnail",
         ]
         read_only_fields = [
             "id",
             "quantity",
             "created_at",
             "updated_at",
+            "thumbnail",
         ]
+
+    def get_thumbnail(self, obj):
+        if obj.curriculum:
+            return obj.curriculum.image.image_url
+        if obj.course:
+            return obj.course.image.image_url
 
     def validate(self, data):
         # 커리큘럼과 코스 중 하나만 선택되었는지 확인합니다.

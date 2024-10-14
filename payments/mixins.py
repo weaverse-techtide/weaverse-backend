@@ -74,8 +74,8 @@ class OrderMixin(GetObjectMixin):
 
         order_items = [
             {
-                "curriculum_id": item.curriculum.id if item.curriculum else None,
-                "course_id": item.course.id if item.course else None,
+                "curriculum": item.curriculum.id if item.curriculum else None,
+                "course": item.course.id if item.course else None,
                 "quantity": item.quantity,
                 "price": item.get_price(),
             }

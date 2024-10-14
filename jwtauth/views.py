@@ -62,15 +62,9 @@ class LoginView(GenericAPIView):
                 )
                 return response
             else:
-                return Response(
-                    {"error": "회원 가입하세요"}, status=status.HTTP_401_UNAUTHORIZED
-                )
+                return redirect(settings.SIGNUP_REDIRECT_URL)
         else:
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST,
-                redirect_uri="http://localhost:3000",
-            )
+            return redirect(settings.SIGNUP_REDIRECT_URL)
 
 
 class LogoutView(GenericAPIView):

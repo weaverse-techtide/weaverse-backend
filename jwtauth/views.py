@@ -1,5 +1,4 @@
 import logging
-
 import jwt
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
@@ -170,19 +169,46 @@ class GoogleLogin(SocialLoginView):
     callback_url = settings.GOOGLE_CALLBACK_URL
     client_class = OAuth2Client
 
+    def get(self, request, *args, **kwargs):
+        """
+        GET 요청: 구글 로그인 페이지로 리다이렉트
+        """
+        return super().get(request, *args, **kwargs)
+
     def get_response(self):
+        """
+        소셜 로그인 완료 후 사용자 정보 처리
+        """
         response = super().get_response()
+
         user = self.user
+
+        if not User.objects.filter(email=user.email).exists():
+            user = User.objects.create_user(
+                nickname=user.mail.split("@")[0],
+                email=user.email,
+            )
+            user.set_unusable_password()
+            user.save()
+
         access_token = generate_access_token(user)
         refresh_token = generate_refresh_token(user)
 
+        response = redirect(settings.LOGIN_REDIRECT_URL)
+        same_site = None if settings.DEBUG else "Lax"
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
             httponly=True,
             secure=not settings.DEBUG,
-            samesite="None",
+            samesite=same_site,
+            max_age=60 * 60 * 24 * 14,
         )
-        response.data = {"access_token": access_token}
-
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            secure=not settings.DEBUG,
+            samesite=same_site,
+            max_age=60 * 30,
+        )
         return response

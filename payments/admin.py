@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import Cart, Order, Payment, UserBillingAddress
+
+from .models import Cart, Order, OrderItem, Payment, UserBillingAddress
+
+admin.site.register(OrderItem)
 
 
 @admin.register(Cart)

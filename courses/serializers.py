@@ -89,7 +89,7 @@ class TopicSerializer(serializers.ModelSerializer):
 
     def get_video_url(self, obj):
         if getattr(obj, "video", None):
-            return obj.video.video_url
+            return obj.video.url
         return None
 
     def get_video_duration(self, obj):
@@ -164,9 +164,8 @@ class CourseDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_author_image(self, obj):
-        print(obj.author.image.image_url)
         if getattr(obj.author, "image", None):
-            return obj.author.image.image_url
+            return obj.author.image.url
         return None
 
     def get_author_name(self, obj):
@@ -174,7 +173,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
 
     def get_video_url(self, obj):
         if getattr(obj, "video", None):
-            return obj.video.video_url
+            return obj.video.url
         return None
 
     def get_thumbnail_url(self, obj):
@@ -233,6 +232,8 @@ class CourseSummarySerializer(serializers.ModelSerializer):
         return obj.get_thumbnail()
 
     def get_author_image(self, obj):
+        if getattr(obj.author, "image", None):
+            return obj.author.image.url
         return "https://paullab.co.kr/images/weniv-licat.png"
 
     def get_author_name(self, obj):
@@ -314,6 +315,8 @@ class CurriculumSummarySerializer(serializers.ModelSerializer):
         ]
 
     def get_author_image(self, obj):
+        if getattr(obj.author, "image", None):
+            return obj.author.image.url
         return "https://paullab.co.kr/images/weniv-licat.png"
 
     def get_author_name(self, obj):

@@ -12,18 +12,21 @@ class ImageSerializer(serializers.ModelSerializer):
     - 검사: 파일 형식과 손상 여부에 대해 유효성 검사를 합니다.
     """
 
+    file = serializers.ImageField(write_only=True)
+
     class Meta:
         model = Image
         fields = [
             "id",
-            "image_url",
+            "url",
             "is_deleted",
             "created_at",
             "updated_at",
+            "file",
         ]
         read_only_fields = [
             "id",
-            "image_url",
+            "url",
             "is_deleted",
             "created_at",
             "updated_at",
@@ -31,11 +34,11 @@ class ImageSerializer(serializers.ModelSerializer):
 
     def validate_file(self, value):
         allowed_image_extensions = (".png", ".jpg", ".jpeg")
-
         if not value.name.endswith(allowed_image_extensions):
             raise serializers.ValidationError(
                 "지원하지 않는 파일 형식입니다. PNG, JPG, JPEG만 가능합니다."
             )
+
         try:
             img = PILImage.open(value)
             img.verify()
@@ -51,44 +54,47 @@ class VideoSerializer(serializers.ModelSerializer):
     - 검사: 파일 형식과 손상 여부에 대해 유효성 검사를 합니다.
     """
 
+    file = serializers.FileField(write_only=True)
+
     class Meta:
         model = Video
         fields = [
             "id",
-            "video_url",
+            "url",
+            "file",
             "is_deleted",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "video_url", "is_deleted", "created_at", "updated_at"]
+        read_only_fields = ["id", "url", "is_deleted", "created_at", "updated_at"]
 
     def validate_file(self, value):
         allowed_extensions = ["mp4", "avi", "mov", "wmv"]
 
-        if not value.name.split(".")[-1] in allowed_extensions:
+        if value.name.split(".")[-1] not in allowed_extensions:
             raise serializers.ValidationError(
                 f"허용되지 않는 파일 형식입니다. 다음 형식만 가능합니다: {', '.join(allowed_extensions)}."
             )
 
-        try:
-            cap = cv2.VideoCapture(value)
-            if not cap.isOpened():
-                raise serializers.ValidationError(
-                    "비디오 파일을 열 수 없습니다. 파일이 손상되었을 수 있습니다."
-                )
+        # try:
+        #     cap = cv2.VideoCapture(value)
+        #     if not cap.isOpened():
+        #         raise serializers.ValidationError(
+        #             "비디오 파일을 열 수 없습니다. 파일이 손상되었을 수 있습니다."
+        #         )
 
-            ret, frame = cap.read()
-            if not ret:
-                raise serializers.ValidationError(
-                    "비디오 파일을 읽을 수 없습니다. 파일이 손상되었을 수 있습니다."
-                )
+        #     ret, frame = cap.read()
+        #     if not ret:
+        #         raise serializers.ValidationError(
+        #             "비디오 파일을 읽을 수 없습니다. 파일이 손상되었을 수 있습니다."
+        #         )
 
-        except Exception as e:
-            raise serializers.ValidationError(
-                f"비디오 파일 검사 중 오류가 발생했습니다: {str(e)}"
-            )
-        finally:
-            cap.release()
+        # except Exception as e:
+        #     raise serializers.ValidationError(
+        #         f"비디오 파일 검사 중 오류가 발생했습니다: {str(e)}"
+        #     )
+        # finally:
+        #     cap.release()
 
         return value
 

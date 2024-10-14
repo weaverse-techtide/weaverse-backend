@@ -149,13 +149,8 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # CORS 설정
-if DEBUG:
-    CORS_ALLOWED_ORIGINS = [
-        "https://www.weaverse.site",  # 프로덕션 환경
-        "http://localhost:3000",  # 개발 환경 프론트엔드
-    ]
-else:
-    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

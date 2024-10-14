@@ -43,7 +43,7 @@ class Image(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']  
+        ordering = ["-created_at"]
 
     def __str__(self):
         if self.user:
@@ -83,7 +83,7 @@ class Video(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']  
+        ordering = ["-created_at"]
 
     def __str__(self):
         if self.topic:
@@ -105,7 +105,7 @@ class VideoEventData(models.Model):
     - 관계: Course(1:1), CustomUser(1:1), CustomUser(1:N)를 갖습니다.
     - 삭제: 소프트 삭제를 위해 불린 필드를 갖습니다.
     - 생성: 지정한 이미지 파일이 없다면 디폴트 값으로 저장됩니다.
-    - 변환: 동영상 전체 길이와 현재 재생 시점을 분과 초로 변환합니다. 
+    - 변환: 동영상 전체 길이와 현재 재생 시점을 분과 초로 변환합니다.
     """
 
     EVENT_CHOICES = [
@@ -136,7 +136,7 @@ class VideoEventData(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True, verbose_name="이벤트 발생 시간")
 
     class Meta:
-        ordering = ['-created_at']  
+        ordering = ["-timestamp"]
 
     def get_duration_in_minutes(self):
         """

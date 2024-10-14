@@ -165,6 +165,13 @@ class RefreshTokenView(GenericAPIView):
 
 
 class GoogleLogin(SocialLoginView):
+    """
+    사용자가 구글 로그인을 할 때 사용, 구글 로그인을 위한 소셜 로그인 뷰입니다.
+    사용자가 구글사이트에서 로그인을 완료하면, 사용자 정보를 받아서 회원가입 또는 로그인 처리합니다.
+    닉네임은 이메일 주소의 @ 앞부분을 사용하고, 비밀번호는 사용하지 않습니다.
+    쿠기에 리프레시 토큰과 액세스 토큰을 저장합니다.
+    """
+
     adapter_class = GoogleOAuth2Adapter
     callback_url = settings.GOOGLE_CALLBACK_URL
     client_class = OAuth2Client

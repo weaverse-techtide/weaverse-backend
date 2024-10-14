@@ -1,9 +1,8 @@
 import io
+import time
 
 import boto3
 import ffmpeg
-from accounts.models import CustomUser
-from accounts.permissions import IsSuperUser, IsTutor
 from botocore.exceptions import ClientError
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -14,6 +13,9 @@ from rest_framework import generics, permissions, status
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
+
+from accounts.models import CustomUser
+from accounts.permissions import IsSuperUser, IsTutor
 
 from .models import Image, Video, VideoEventData
 from .serializers import ImageSerializer, VideoEventDataSerializer, VideoSerializer
@@ -39,22 +41,6 @@ def optimize_image(image_file):
     optimized_io.seek(0)
 
     return optimized_io
-
-
-def optimize_video(video_file):
-    """
-    동영상 파일을 최적화합니다.
-    - 포맷 변환
-    - 리사이징 작업
-    """
-    output_io = io.BytesIO()
-
-    ffmpeg.input(video_file).output(
-        output_io, format="mp4", video_bitrate="1000k", s="640x360", preset="fast"
-    ).run(overwrite_output=True)
-
-    output_io.seek(0)
-    return output_io
 
 
 def upload_to_s3(file_io, file_name, content_type):
@@ -92,8 +78,7 @@ class ImageCreateView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
-        image_file = request.FILES.get("image_url")
+        image_file = request.FILES.get("file")
 
         if not image_file:
             return Response(
@@ -102,10 +87,8 @@ class ImageCreateView(generics.CreateAPIView):
             )
 
         optimized_image = optimize_image(image_file)
-
         try:
-
-            user = get_object_or_404(CustomUser, id=request.data.get("user_id"))
+            user = get_object_or_404(CustomUser, id=request.user.id)
 
             if user:
                 timestamp = int(time.time())
@@ -120,7 +103,7 @@ class ImageCreateView(generics.CreateAPIView):
 
             file_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{file_name}"
 
-            image = serializer.save(image_url=file_url)
+            image = Image.objects.create(author=user, url=file_url)
 
             return Response(
                 self.get_serializer(image).data, status=status.HTTP_201_CREATED
@@ -202,7 +185,7 @@ class ImageRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
             file_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{file_name}"
 
-            image = serializer.save(image_url=file_url)
+            image = serializer.save(url=file_url)
 
             return Response(self.get_serializer(image).data, status=status.HTTP_200_OK)
         except ClientError as e:
@@ -255,28 +238,25 @@ class VideoCreateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        video_file = request.FILES.get("video_url")
+        video_file = request.FILES.get("file")
         if not video_file:
             return Response(
                 {"error": "동영상 파일이 필요합니다."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        optimized_video = self.optimize_video(video_file)
-
         try:
-            user = get_object_or_404(CustomUser, id=request.data.get("user_id"))
+            user = get_object_or_404(CustomUser, id=request.user.id)
 
             if user:
                 timestamp = int(time.time())
                 file_name = f"videos/user_{user.id}/{timestamp}_{video_file.name}"
 
-            upload_to_s3(optimized_video, file_name, "video/mp4")
+            upload_to_s3(video_file, file_name, "video/mp4")
 
             file_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{file_name}"
 
-            serializer.validated_data["video_url"] = file_url
-            video = serializer.save(video_url=file_url)
+            video = Video.objects.create(url=file_url)
 
             return Response(
                 self.get_serializer(video).data, status=status.HTTP_201_CREATED
@@ -285,8 +265,6 @@ class VideoCreateView(generics.CreateAPIView):
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        finally:
-            del optimized_video
 
 
 class VideoListView(generics.ListAPIView):
@@ -324,7 +302,7 @@ class VideoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         serializer = self.get_serializer(video, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
-        video_file = request.FILES.get("video_url")
+        video_file = request.FILES.get("file")
         if not video_file:
             return Response(
                 {"error": "동영상 파일이 필요합니다."},
@@ -343,7 +321,7 @@ class VideoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             )
             s3_client.delete_object(
                 Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-                Key=video.video_url.split("/")[-1],
+                Key=video.url.split("/")[-1],
             )
 
             user = get_object_or_404(CustomUser, id=request.data.get("user_id"))
@@ -356,7 +334,7 @@ class VideoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
             file_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{file_name}"
 
-            serializer.validated_data["video_url"] = file_url
+            serializer.validated_data["url"] = file_url
             video = serializer.save()
 
             return Response(self.get_serializer(video).data, status=status.HTTP_200_OK)
@@ -383,8 +361,8 @@ class VideoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             )
 
         try:
-            image.is_deleted = True
-            image.save()
+            video.is_deleted = True
+            video.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except ClientError as e:
             return Response(

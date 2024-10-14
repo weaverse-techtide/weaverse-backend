@@ -102,10 +102,18 @@ class OrderItemSerializer(serializers.ModelSerializer):
         ]
 
     def get_thumbnail(self, obj):
-        if obj.curriculum:
-            return obj.curriculum.image.image_url
-        if obj.course:
-            return obj.course.image.image_url
+        if (
+            obj.curriculum
+            and hasattr(obj.curriculum, "image")
+            and hasattr(obj.curriculum.image, "url")
+        ):
+            return obj.curriculum.image.url
+        if (
+            obj.course
+            and hasattr(obj.course, "image")
+            and hasattr(obj.course.image, "url")
+        ):
+            return obj.course.image.url
 
     def validate(self, data):
         # 커리큘럼과 코스 중 하나만 선택되었는지 확인합니다.

@@ -1,7 +1,8 @@
-from accounts.models import CustomUser
-from courses.models import Course, Topic
 from django.conf import settings
 from django.db import models
+
+from accounts.models import CustomUser
+from courses.models import Course, Topic
 
 
 class Image(models.Model):
@@ -34,9 +35,9 @@ class Image(models.Model):
         null=True,
         blank=True,
     )
-
-    image_url = models.ImageField(
-        upload_to="images/", blank=True, null=True, verbose_name="이미지 파일"
+    url = models.URLField(
+        verbose_name="이미지 URL",
+        default="https://paullab.co.kr/images/weniv-licat.png",
     )
     is_deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -54,10 +55,10 @@ class Image(models.Model):
 
     def save(self, *args, **kwargs):
 
-        if self.user and not self.image_url:
-            self.image_url = f"{settings.MEDIA_URL}images/default_user_image.jpg"
-        if self.course and not self.image_url:
-            self.image_url = f"{settings.MEDIA_URL}images/default_user_image.jpg"
+        if self.user and not self.url:
+            self.url = f"{settings.MEDIA_URL}images/default_user_image.jpg"
+        if self.course and not self.url:
+            self.url = f"{settings.MEDIA_URL}images/default_user_image.jpg"
         super().save(*args, **kwargs)
 
 
@@ -75,8 +76,9 @@ class Video(models.Model):
     course = models.OneToOneField(
         Course, on_delete=models.CASCADE, related_name="video", null=True, blank=True
     )
-    video_url = models.FileField(
-        upload_to="videos/", blank=True, null=True, verbose_name="비디오 파일"
+    url = models.URLField(
+        verbose_name="동영상 URL",
+        default="https://www.youtube.com/watch?v=bZh8oUIDfdI&t=1s",
     )
     is_deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -93,8 +95,8 @@ class Video(models.Model):
         return "Video"
 
     def save(self, *args, **kwargs):
-        if not self.video_url:
-            self.video_url = f"{settings.MEDIA_URL}videos/default_video.mp4"
+        if not self.url:
+            self.url = f"{settings.MEDIA_URL}videos/default_video.mp4"
 
         super().save(*args, **kwargs)
 

@@ -93,10 +93,10 @@ class CartItem(models.Model):
         return unit_price * self.quantity
 
     def get_image_url(self):
-        if self.curriculum:
-            return self.curriculum.image.image_url
-        elif self.course:
-            return self.course.image.image_url
+        if self.curriculum and hasattr(self.curriculum, "image"):
+            return self.curriculum.image.url
+        elif self.course and hasattr(self.course, "image"):
+            return self.course.image.url
         return None
 
     class Meta:
@@ -222,10 +222,10 @@ class OrderItem(models.Model):
         return unit_price * self.quantity
 
     def get_image_url(self):
-        if self.curriculum:
-            return self.curriculum.image.image_url
-        elif self.course:
-            return self.course.image.image_url
+        if self.curriculum and hasattr(self.curriculum, "image"):
+            return self.curriculum.image.url
+        elif self.course and hasattr(self.course, "image"):
+            return self.course.image.url
         return None
 
     def set_expiry_date(self):

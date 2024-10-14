@@ -1,6 +1,6 @@
 # WEAVERSE 프로젝트
 
-<img src="https://github.com/nathanLYJ/NathanLYJ/blob/main/attackment/weaverse로고.PNG" width="400" height="200" alt="로고">
+<img src="https://github.com/nathanLYJ/NathanLYJ/blob/main/attackment/weaverse로고.PNG" width="400" height="400" alt="로고">
 
 WEAVERSE는 온라인 영상 교육 플랫폼을 구현하기 위한 프로젝트입니다.
 

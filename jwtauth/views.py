@@ -61,15 +61,9 @@ class LoginView(GenericAPIView):
                 )
                 return response
             else:
-                return Response(
-                    {"error": "회원 가입하세요"}, status=status.HTTP_401_UNAUTHORIZED
-                )
+                return redirect(settings.SIGNUP_REDIRECT_URL)
         else:
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST,
-                redirect_uri="http://localhost:3000",
-            )
+            return redirect(settings.SIGNUP_REDIRECT_URL)
 
 
 class LogoutView(GenericAPIView):
@@ -176,12 +170,6 @@ class GoogleLogin(SocialLoginView):
     callback_url = settings.GOOGLE_CALLBACK_URL
     client_class = OAuth2Client
 
-    def get(self, request, *args, **kwargs):
-        """
-        GET 요청: 구글 로그인 페이지로 리다이렉트
-        """
-        return super().get(request, *args, **kwargs)
-
     def get_response(self):
         """
         소셜 로그인 완료 후 사용자 정보 처리
@@ -192,7 +180,7 @@ class GoogleLogin(SocialLoginView):
 
         if not User.objects.filter(email=user.email).exists():
             user = User.objects.create_user(
-                nickname=user.mail.split("@")[0],
+                nickname=user.email.split("@")[0],
                 email=user.email,
             )
             user.set_unusable_password()

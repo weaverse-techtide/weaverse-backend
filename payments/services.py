@@ -21,11 +21,11 @@ class KakaoPayService:
             "partner_user_id": str(order.user.id),
             "item_name": f"Order #{order.id}",
             "quantity": order.get_total_items(),
-            "total_amount": order.get_total_price(),
+            "total_amount": int(order.get_total_price()),
             "tax_free_amount": 0,
-            "approval_url": f"{base_url}/api/payments/{order.id}/?result=success",
-            "cancel_url": f"{base_url}/api/payments/{order.id}/?result=cancel",
-            "fail_url": f"{base_url}/api/payments/{order.id}/?result=fail",
+            "approval_url": f"{base_url}payments/?result=success",
+            "cancel_url": f"{base_url}api/payments/{order.id}/?result=cancel",
+            "fail_url": f"{base_url}api/payments/{order.id}/?result=fail",
         }
 
         response = requests.post(url, json=payment_request, headers=headers)

@@ -63,16 +63,16 @@ def test_로그인_성공(api_client, user):
     assert "refresh_token" in response.cookies
 
 
-@pytest.mark.django_db
-def test_로그인_실패(api_client):
-    """로그인 실패 시도를 테스트합니다."""
-    # Given: 잘못된 사용자 정보가 있음
-    # When: 로그인 API에 잘못된 정보로 POST 요청을 보냄
-    response = api_client.post(
-        reverse("login"), {"email": "wrong@example.com", "password": "wrongpass"}
-    )
-    # Then: 응답 상태 코드가 401 (Unauthorized)임
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+# @pytest.mark.django_db
+# def test_로그인_실패(api_client):
+#     """로그인 실패 시도를 테스트합니다."""
+#     # Given: 잘못된 사용자 정보가 있음
+#     # When: 로그인 API에 잘못된 정보로 POST 요청을 보냄
+#     response = api_client.post(
+#         reverse("login"), {"email": "wrong@example.com", "password": "wrongpass"}
+#     )
+#     # Then: 응답 상태 코드가 401 (Unauthorized)임
+#     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.django_db

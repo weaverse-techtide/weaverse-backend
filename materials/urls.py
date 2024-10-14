@@ -29,12 +29,12 @@ urlpatterns = [
     ),
     path(
         "user/<int:user_id>/video/<int:video_id>/history/",
-        views.UserVideoEventListView(),
+        views.UserVideoEventListView.as_view(),
         name="video-event-list",
     ),
     path(
         "user/<int:user_id>/video/<int:video_id>/history/<int:event_id>",
-        views.UserVideoEventRetrieveUpdateDestroyView(),
+        views.UserVideoEventRetrieveUpdateDestroyView.as_view(),
         name="video-event-detail",
     ),
 ]

@@ -16,8 +16,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from .models import Image, Video, VideoEventData
-from .serializers import (ImageSerializer, UserViewEventListSerializer,
-                          VideoEventDataSerializer, VideoSerializer)
+from .serializers import ImageSerializer, VideoEventDataSerializer, VideoSerializer
 
 User = get_user_model()
 

@@ -211,6 +211,7 @@ GOOGLE_CALLBACK_URL = "https://www.weaverse.site/api/social-login/google/callbac
 
 REDIRECT_URL = "https://www.weaverse.site"
 LOGIN_REDIRECT_URL = os.getenv("LOGIN_REDIRECT_URL", "/")
+SIGNUP_REDIRECT_URL = os.getenv("SIGNUP_REDIRECT_URL", "/")
 LOGOUT_REDIRECT_URL = "/"
 
 MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"

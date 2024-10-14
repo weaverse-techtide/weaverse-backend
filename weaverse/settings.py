@@ -201,35 +201,16 @@ SOCIALACCOUNT_PROVIDERS = {
             "key": "",
         },
     },
-    "kakao": {
-        "SCOPE": [
-            "profile",
-            "account_email",
-        ],
-        "APP": {
-            "client_id": os.getenv("SOCIAL_AUTH_KAKAO_CLIENT_ID"),
-            "secret": "",
-            "key": "",
-        },
-    },
 }
-
-
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
 
-
-REST_USE_JWT = True
-JWT_AUTH_COOKIE = "my-app-auth"
-JWT_AUTH_REFRESH_COOKIE = "my-refresh-token"
-
-GOOGLE_CALLBACK_URL = "https://www.weaverse.site/social-login/google/"
-
-SOCIAL_AUTH_KAKAO_KEY = os.getenv("SOCIAL_AUTH_KAKAO_KEY")
+GOOGLE_CALLBACK_URL = "https://www.weaverse.site/api/social-login/google/callback/"
 
 REDIRECT_URL = "https://www.weaverse.site"
 LOGIN_REDIRECT_URL = os.getenv("LOGIN_REDIRECT_URL", "/")
 LOGOUT_REDIRECT_URL = "/"
+
 MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"

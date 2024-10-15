@@ -138,11 +138,11 @@ python-dateutil: 날짜 및 시간 유틸리티
 ```
 
 ### 2 아키텍쳐
-- 그림 삽입
- 
-### 3 요구사항 명세
+![아키텍쳐](assets/images/architecture.png)
 
-요청하신 대로 마크다운 표를 작성해 드리겠습니다.
+
+
+### 3 요구사항 명세
 
 #### 3-1 기능적 요구사항
 
@@ -333,8 +333,6 @@ python-dateutil: 날짜 및 시간 유틸리티
 
 
 ### 6 데이터베이스 모델링(ERD)
-
-![erd](assets/images/erd.png)
 
 ```mermaid
 erDiagram
@@ -544,8 +542,17 @@ erDiagram
         json metadata
     }
 ```
+
 ### 7 와이어프레임
-- 피그마
+
+* 링크: [Weaverse-WireFrame](https://www.figma.com/board/9nmo3vsKy2YfRUo8KdzVrf/Weaverse?node-id=0-1&node-type=canvas&t=wDQiC8oTcgO9btQY-0)
+
+| 사용 설명서 | 예시 |
+|:--------:| :--------:| 
+|<img src="assets/images/wireframe_manual.png" width="500" height="300" alt="사용설명서">|<img src="assets/images/wireframe_example.png" width="600" height="300" alt="예시">|
+
+
+
 
 ### 8 WBS
 
@@ -592,6 +599,9 @@ gantt
 
 ![week2](assets/images/week2.png)
 
+#### 기능 내용
+![week2-course](assets/images/WBS_example.png)
+
 ### 최종 검토 및 문서화
 
 ![week3](assets/images/week3.png)
@@ -601,29 +611,62 @@ gantt
 
 | 이름 | 이유정 | 유연우 | 유원길 | 임홍광 |
 |------|--------|--------|--------|--------|
-| GitHub | <a href="https://github.com/devnproyj22"><img src="https://github.com/weaverse-techtide/weaverse-backend/blob/dev/assets/images/%EC%9D%B4%EC%9C%A0%EC%A0%95.jpg" width="100" height="100" alt="이유정"></a> | <a href="https://github.com/Yoo117"><img src="https://github.com/weaverse-techtide/weaverse-backend/blob/dev/assets/images/%EC%9C%A0%EC%97%B0%EC%9A%B0.jpg" width="100" height="100" alt="유연우"></a> | <a href="https://github.com/nathanLYJ"><img src="https://github.com/weaverse-techtide/weaverse-backend/blob/dev/assets/images/%EC%9C%A0%EC%9B%90%EA%B8%B8.jpg" width="100" height="100" alt="유원길"></a> | <a href="https://github.com/AlbertImKr"><img src="https://github.com/weaverse-techtide/weaverse-backend/blob/dev/assets/images/%EC%9E%84%ED%99%8D%EA%B4%91.jpg" width="100" height="100" alt="임홍광"></a> |
+| GitHub | <a href="https://github.com/devnproyj22"><img src="assets/images/%EC%9D%B4%EC%9C%A0%EC%A0%95.jpg" width="100" height="100" alt="이유정"></a> | <a href="https://github.com/Yoo117"><img src="assets/images/%EC%9C%A0%EC%97%B0%EC%9A%B0.jpg" width="100" height="100" alt="유연우"></a> | <a href="https://github.com/nathanLYJ"><img src="assets/images/%EC%9C%A0%EC%9B%90%EA%B8%B8.jpg" width="100" height="100" alt="유원길"></a> | <a href="https://github.com/AlbertImKr"><img src="assets/images/%EC%9E%84%ED%99%8D%EA%B4%91.jpg" width="100" height="100" alt="임홍광"></a> |
 | 역할 | 팀장 | 팀원 | 팀원 | 팀원 |
 | 담당 | 사용자, 자료 | 결제 | 인증 | 과목, FE |
 
 
 #### 9-1 역할 분담 기준
+* (우선) 필수 기능
 * 안 해본 기능
 * 흥미 있는 기능
 * 기간 내 구현할 수 있는 기능
-                                                                                                            |
+
+#### 9-2 뉴팀원에 대한 역할 분담 기준
+* (추가) 중요 기능
+* 기간 내 구현할 수 있는 기능
+
+## 구현 단계
+
+### 1 브랜치 생성 
+
+각자 담당한 Issue로 브랜치 생성하여 각 앱 구현
+
+### 2 PR로 코드 리뷰 및 작성
+
+| 사용 설명서 | 예시 |
+|:--------:| :--------:| 
+|<img src="assets/images/PR_detail.png" width="500" height="300" alt="사용설명서">|<img src="assets/images/PR_feedback.png" width="600" height="300" alt="예시">|
+
+
+
+PR을 올리기 전에 구현한 내용을 파일 목록 별로 설명을 작성하여 PR을 올립니다. 
+각 팀원이 댓글로 피드백을 올리는 시간을 가졌습니다.
+그리고 PR 올린 당사자가 코드 부분을 화면 공유하면서 전체적인 코드를 설명이 끝나면 
+각 팀원이 피드백으로 질문을 하면서 진행하였습니다. 
+
+
+### 3 중간 질문 및 토론
+
+질문이나 선택할 부분이 생겼을 때 Discussion에 안건을 생성해 토의 후 결론지었습니다. 
+결론을 내기 어렵거나 모르는 부분이 있는 토론은 멘토님이나 강사님과 함께 토론을 진행하였습니다. 
+
 
 
 ## 결과물
 
 ### 1 배포 도메인
-- 프론트엔드 도메인: [www.weaverse.site/](www.weaverse.site/)
-- 백엔드 도메인: [www.weaverse.site/api/](www.weaverse.site/api/)
-- API 문서 도메인: [www.weaverse.site/schema/swagger-ui](www.weaverse.site/schema/swagger-ui)
-- 테스트용 관리자 계정
+
+[ 테스트용 관리자 계정 ]
 ```
 아이디: test@example.com
 비번: 24LMBPAaAgz4ZJw
 ```
+
+- 프론트엔드 도메인: [www.weaverse.site/](www.weaverse.site/)
+- 백엔드 도메인: [www.weaverse.site/api/](www.weaverse.site/api/)
+- API 문서 도메인: [www.weaverse.site/schema/swagger-ui](www.weaverse.site/schema/swagger-ui)
+
 
 ### 2 프로젝트 구조
 <details><summary><strong>자세히 보기</strong></summary>
@@ -720,8 +763,6 @@ gantt
 
 
 ### 3 구현된 화면
-- url별로 화면 캡쳐
-
 - 피그마를 사용해 화면 연결
 - 각 앱별로 표를 작성
 
@@ -738,35 +779,283 @@ gantt
 
 
 ### 5 테스트 케이스
-- 과정을 상세히 feat. 느낀점
+
+[ 테스트 환경 ]
+```
+- 테스트 데이터베이스: PostgreSQL 사용
+- 테스트 데이터: app/conftest.py 안 pytest fixtures를 사용하여 공통 내용 정의 및 객체 생성
+- 테스트 위치: 각 app/test 디렉토리 
+- 테스트 패턴: 테스트의 준비, 실행, 검증 단계를 명확히 구분
+- 테스트 자동화: (실행 주기) Commit, Pull Request, 정기적으로 매주말 (트리거방식) CI/CD 파이프라인과 연동
+```
+기본 설정은 데코레이터를 사용한 픽스처(@pytest.fixture), 마킹(@pytest.mark)를 사용했습니다.
+테스트 데이터는 실제 데이터베이스와 격리된 환경에서 생성되므로, 테스트가 독립적으로 생성하여 실행하였습니다. 
+테스트 케이스를 작성할 때는 assert 구문을 사용해서 각 앱안 파일별 기능에 대한 간결하며 직관적으로 작성했습니다.
+
+PR에서 다른 앱에서 발생한 테스트도 함께 볼 수 있게 하였습니다. 
+
+
+[ 테스트 주요 영역 ]
+```
+1. 모델
+2. 시리얼라이저
+3. 뷰 (API 엔드포인트)
+4. 권한 클래스
+```
+
+
+[ 테스트 케이스 내용 ]
+```
+앱별 테스트 케이스를 작성하여
+- 각 앱 관리 기능의 정확성 검증
+- 권한 및 인증 로직의 올바른 동작 확인
+- API 엔드포인트의 정상 작동 확인
+- 모델, 시리얼라이저, 뷰의 기능 검증
+```
+
+[ 테스트 결과 보고, 분석 및 조치 ]
+```
+  1. 실패한 테스트 케이스 확인
+  2. 오류 메시지 및 스택 트레이스 분석: 장고 코드에 디버깅 정보 출력
+  3. 필요한 경우 해당 부분 코드 리뷰 및 수정
+  4. 수정 후 다시 테스트 진행
+```
+
 
 
 ## 토론했던 내용(시행 착오)
-- 독립적인 앱 연결
+
+선택지들의 tradeoff(장단점)을 토의 후 결정하였습니다. 
+
+### [ 장고 코드 구조 ]
+
+#### [1] 앱을 어떻게 분리했는지, 그 이유는 무엇인지?
+
+결론: 사용자 계정, 인증, 과목, 결제, 자료를 분리하여 독립적인 앱을 만들었습니다. 
+
+선택이유:
+
+앱이 많아질수록 프로젝트의 전반적인 구조가 복잡해져서 관리가 어려울 수 있고 서로 다른 앱 간 데이터나 로직을 공유해야 할 경우 의존성 관리가 까다로울 수 있지만 각 앱은 독립적 모듈로 작동하여 다른 프로젝트에서 재사용할 수 하기 위해서 선택하였습니다. 
+
+
+#### [2] 모델, 시리얼라이저와 뷰의 역할 구분은 어떻게 했는지, 그 이유는 무엇인지?
+
+결론: 모델은 필드, 관계, 특정 값 연산(예. 객체 수 등 값) 로직, 시리얼라이저는 유효성 검사, 직렬화/역직렬화, 뷰는 그외 비즈니스 로직(예. 최적화), 요청 및 응답 처리하는 역할로 구분하였습니다..
+
+선택이유:
+
+장고 코드를 참고하여 장고 철학을 반영하려고 하였고 각 앱의 파일 내용을 통일해서 가독성를 높였습니다.  
+
+
+```python
+# 시리얼라이저에 로직을 넣는 경우
+class UserSerializer(serializers.ModelSerializer):
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("이미 존재하는 이메일입니다.")
+        return value
+
+# 뷰에 로직을 넣는 경우
+class UserCreateView(generics.CreateAPIView):
+    def perform_create(self, serializer):
+        user = serializer.save()
+        send_welcome_email(user.email)
+```
+ 
+
+#### [3] 일반 시리얼라이저, 모델 시리얼라이저 중 어떤 것을 사용했는지, 그 이유는 무엇인지?
+
+결론: 모델의 필드가 필요한 처리일 경우는 모델 시리얼라이저로, 쓰고 삭제할 필드가 필요한 처리일 경우에는 시리얼라이저를 사용했습니다. 
+
+선택 이유:
+
+모델과 1:1로 매핑되는 경우 모델 시리얼라이저를 사용하면, 한번 쓸 필드인 경우 시리얼라이저를 사용하면 코드가 간결해졌습니다. 
+
+
+#### [4] 뷰 클래스 중 어떤 것을 사용했는지, 그 이유는 무엇인지?
+
+결론: 구체적이고 명시적으로 알 수 있기에 중간단계인 Generics.APIView와 Mixin을 사용하였습니다. 
+
+선택이유:
+
+추상화와 중복성을 고려하여 선택하였습니다. 
+
+### [ 인증 ]
+
+#### [5] 인증할때 세션과 토큰 중 어느 것을 사용했는지, 그 이유는 무엇인지?
+
+
+**결정:**
+  - **JWT 토큰 인증** 방식을 사용하기로 결정
+
+**결정 이유**: 
+  1. **서버 부하 최소화**: 상태를 유지하지 않아 서버 리소스 소모가 적습니다.
+  2. **효율적인 네트워크 사용**: 인증에 필요한 정보의 양이 적고, 추가적인 부하 증가 우려가 크지 않습니다.
+  3. **토큰 만료 관리**: 토큰 수명 설정과 Blacklist 모델을 통해 효과적으로 관리할 수 있습니다.
+  4. **확장성**: 마이크로서비스 아키텍처에 적합하며, 이는 좋은 개발 경험을 제공할 수 있습니다.
+  5. **보안 강화**: XSS와 같은 보안 위협에 대비하기 위해, 토큰은 **Cookies**에 저장하여 전송할 계획입니다.
+
+
+#### [6] 토큰 만료는 어떻게 처리했는지, 그 이유는 무엇인지?
+
+**결정:**
+  - **Refresh Token Rotation** 방식을 사용하기로 결정
+
+
+**결정 이유**:  
+
+**RTR(Refresh Token Rotation)**는 만료된 JWT 토큰을 처리하고 새 토큰을 발급하는 방식으로, 보안을 강화하는 데 중요한 방법 중 하나입니다. JWT 인증에서 **토큰 만료 처리**와 **토큰 갱신**이 중요한 이슈인데, 이 문제를 해결하는 하나의 전략이 **Refresh Token Rotation**입니다. 
+
+  1. **보안성 강화**: Refresh Token를 한 번 사용할 때마다 새로운 토큰을 발급하여, 도난된 토큰의 재사용을 방지할 수 있습니다.
+  2. **토큰 탈취 위험 감소**: 누군가 Refresh Token를 탈취해도, 그 토큰은 이미 만료된 상태일 가능성이 크기 때문에 보안 위협을 줄일 수 있습니다.
+  3. **긴 세션 유지**: 짧은 Access Token의 수명을 유지하면서도, Refresh Token를 통해 사용자가 지속적으로 인증 상태를 유지할 수 있습니다.
+
+### [ 데이터 전달 ]
+
+#### [7] fetch를 몇변 할 것인지, 그 이유는 무엇인지?
+
+**예시**:
+- 코스 목록과 상세 정보를 별도로 요청
+- 코스와 관련된 모든 정보를 한 번에 요청
+
+결론: 성능을 위해서 관련된 모든 정보를 한 번에 요청하기로 선택했습니다. 
+
+선택이유:
+
+데이터의 크기, 사용 빈도, 프론트엔드의 구조 등을 고려하여 결정했습니다.
+
+#### [8] 트랜잭션을 어떻게 처리했는지, 그 이유는 무엇인지?
+
+**예시**:
+```python
+from django.db import transaction
+
+@transaction.atomic
+def create_order(user, cart):
+    order = Order.objects.create(user=user)
+    for item in cart.items.all():
+        OrderItem.objects.create(order=order, product=item.product, quantity=item.quantity)
+    cart.clear()
+    return order
+```
+
+**결론**: 같은 데이터 대상에 대한 여러 단계의 데이터베이스 작업이 모두 성공하거나 모두 실패해야 하는 경우 트랜잭션을 사용했습니다
+
+#### [9] 테스트
+
+#### pytest 선택
+- 데코레이터를 활용한 마킹(@pytest.mark) 등으로 테스트를 체계적으로 관리
+- 강력한 피처와 플러그인 생태계
+- 우수한 에러 메시지와 디버깅 지원
+- Fixture 시스템
+
+#### 각 앱별로 테스트 케이스 작성
+**토론**: 테스트 케이스 작성 전략은?
+
+**결론**: 각 앱의 주요 기능과 비즈니스 로직을 테스트하고, 코드 변경 시 테스트 케이스를 실행하여 기능이 올바르게 작동하는지 확인하기 위해 앱별로 테스트 케이스를 작성했습니다.
+
+#### get object or 404 등 에러메시지 상속(mixin)에서 구현
+**토론**: 에러 처리를 mixin으로 구현한 이유는?
+
+**예시**:
+```python
+class GetObjectOr404Mixin:
+    def get_object_or_404(self, queryset, *filter_args, **filter_kwargs):
+        try:
+            return get_object_or_404(queryset, *filter_args, **filter_kwargs)
+        except Http404:
+            raise NotFound(detail="요청한 객체를 찾을 수 없습니다.")
+```
+
+**결론**: 공통된 에러 처리 로직을 재사용하고 일관된 에러 메시지를 제공하기 위해 mixin을 사용했습니다.
+
+#### 비동기
+<비동기 결제 처리 개선>
+
+문제
+원래 결제 처리 로직은 중간중간 예외 처리를 추가하여 중복 결제를 방지하려 했습니다. 그러나 온라인 강의라는 상품의 특성상 상품 수량 제한으로 인해 오류가 발생할 가능성이 적었고, 이러한 예외 처리 로직이 서버의 최적화를 저해할 것이라는 판단이 들었습니다. 이에 따라 예외 처리를 제거하였으나, 코드 리뷰 과정에서 예외 처리 구문이 결제 처리 코드의 길이를 증가시키고 실제로 결제 과중 상황에서 중복 결제를 방지하지 못한다는 피드백을 받았습니다.
+
+해결
+이러한 문제를 해결하기 위해, 우리는 비동기 방식으로 결제 처리를 재설계하였습니다. 비동기 결제 처리 방식을 도입함으로써 결제 처리 로직이 더욱 간소화되었으며, 코드의 가독성도 개선되었습니다. 이와 동시에, 결제 처리의 보안성이 강화되어 중복 결제와 같은 잠재적 위험 요소를 효과적으로 줄일 수 있었습니다.
+
+이와 같은 개선 사항을 통해 사용자에게 보다 안정적이고 효율적인 결제 경험을 제공할 수 있게 되었습니다.
+
+### [ 총평 ]
+
+- 독립적인 앱 연결: 
+이름 수정 => 나머지 코드 수정 방법?
+=> 자주 수정할 때 생기는 에러 
+
+한 앱에서 수정했을 때 다른 앱에서도 변경
 - BE 문서화: schema 를 상세히 작성하지 못했고
 - BE 테스트: 구체적인 에러 유형별 확인 못함, 독립적인 앱 연결 -> TDD
 - FE 빨리 시작: 늦은 시작, 시간 촉박
 
 
 ## 겪었던 에러
+#### 필드값 공백으로 일어난 문제
+**예시**: 
+```python
+class User(models.Model):
+    email = models.EmailField(unique=True, blank=True)  # blank=True가 문제
+```
+
+**해결**: `blank=False`로 설정하고, 폼 검증 로직 추가
+
+#### 구현한 에러의 종류와 테스트 코드에서 확인
+**예시**:
+```python
+def test_invalid_email_format(self):
+    data = {"email": "invalid_email", "password": "password123"}
+    response = self.client.post('/api/register/', data)
+    self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    self.assertIn('email', response.data)
+```
+
+#### 라이브러리 충돌
+**문제**: Django 버전과 JWT 라이브러리 호환성 문제
+
+**해결**: 
+1. PyJWT 버전로 교체
+
+**문제**: JWT와 PyJWT 버전 충돌, Encoding 오류 발생.
+
+**해결**:
+1. JWT와 PyJWT 모두 삭제, PyJWT 만 다시 설치
+
+#### FE 에러
+**예시**: CORS 설정 문제로 인한 API 호출 실패
+
+**해결**:
+```python
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "https://XXX.com",
+]
+```
+
+## 느낀점과 배운점
+
+### [ 총평 ]
+
+- 독립적인 앱 연결: 
+이름 수정 => 나머지 코드 수정 방법?
+=> 자주 수정할 때 생기는 에러 
+
+한 앱에서 수정했을 때 다른 앱에서도 변경
+- BE 문서화: schema 를 상세히 작성하지 못했고
+- BE 테스트: 구체적인 에러 유형별 확인 못함, 독립적인 앱 연결 -> TDD
+- FE 빨리 시작: 늦은 시작, 시간 촉박
 
 
-## 회고
+
+
+## 개별 회고(느낀점과 배운점)
 
 유정님
 
-프로젝트를 진행하는 3주 동안 
-
-
-
-
-
-
-
-
-
-
-
+프로젝트를 진행하는 3주 동안 팀장 역할을 맡으면서 그때 그때 기록의 중요성, README의 종요성,
+팀 안의 소통의 중요성, 선택지에 대한 trade-off의 중요성, WBS를 빠르게 파악하고 기한 내에 구현하는 것의 중요성과 같은 많은 깨달음을 얻게 된 좋은 경험이었습니다. 특히, 성장은 혼자가 아닌 같이 함께 문제를 해결해가면서 하는 것임을 배웠고 배움에 있어 관점이 많이 달라진 계기가 되었습니다. 팀장은 처음이라 서투른 면이 많았는데 팀원들이 많이 도와주셔서 완주할 수 있었습니다.  연우님, 원길님, 홍광님 감사합니다. 
 
 연우님
 

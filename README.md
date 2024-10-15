@@ -667,6 +667,12 @@ PR을 올리기 전에 구현한 내용을 파일 목록 별로 설명을 작성
 - 백엔드 도메인: [www.weaverse.site/api/](www.weaverse.site/api/)
 - API 문서 도메인: [www.weaverse.site/schema/swagger-ui](www.weaverse.site/schema/swagger-ui)
 
+#### 1-1 성능 테스트
+
+![성능테스트 결과](assets/images/performance.png)
+
+테스트에는 슈퍼계정의 에세스토큰으로 사용자의 데이터를 조회하는 방식으로 구현했습니다. 
+데이터의 양은 많지않지만, 사이트에서 안정성 있게 기본 성능 테스트를 작성하였습니다. 
 
 ### 2 프로젝트 구조
 <details><summary><strong>자세히 보기</strong></summary>

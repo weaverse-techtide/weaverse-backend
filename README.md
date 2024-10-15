@@ -353,6 +353,7 @@ erDiagram
     MultipleChoiceQuestion ||--o{ MultipleChoiceQuestionChoice : has
     Course ||--o| Image : has
     Course ||--o| Video : has
+    Video ||--o{ VideoEventData : has
     Cart ||--o{ CartItem : contains
     Order ||--o{ OrderItem : contains
     Order ||--o{ Payment : has
